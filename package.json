@@ -1,0 +1,38 @@
+{
+  "name": "knowledge-heatmap",
+  "version": "0.0.1",
+  "description": "Visualizes your vault's activity and connectivity as a heat map in Graph View.",
+  "main": "main.js",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "node esbuild.config.mjs production",
+    "lint": "eslint src/**/*.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "keywords": [
+    "obsidian",
+    "plugin",
+    "heatmap",
+    "graph-view",
+    "knowledge-graph"
+  ],
+  "author": "Mir",
+  "license": "MIT",
+  "dependencies": {
+    "d3": "^7.9.0"
+  },
+  "devDependencies": {
+    "@types/d3": "^7.4.3",
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
+    "builtin-modules": "^3.3.0",
+    "esbuild": "^0.21.5",
+    "eslint": "^8.57.0",
+    "obsidian": "^1.5.0",
+    "tslib": "^2.6.3",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  }
+}
