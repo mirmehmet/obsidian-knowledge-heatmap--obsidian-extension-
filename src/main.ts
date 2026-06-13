@@ -1,4 +1,4 @@
-import { Plugin, TFile, Notice } from "obsidian";
+import { Plugin, TFile, Notice, WorkspaceLeaf } from "obsidian";
 import { NoteAnalyzer } from "./core/NoteAnalyzer";
 import { ScoreCalculator } from "./core/ScoreCalculator";
 import { BucketSorter } from "./core/BucketSorter";
@@ -46,7 +46,7 @@ export default class KnowledgeHeatMapPlugin extends Plugin {
       this.activateView();
     });
 
-    this.controlButton = new HeatControlButton(this.app, this, () => this.togglePanel());
+    this.controlButton = new HeatControlButton(this.app, this, (leaf) => this.togglePanel(leaf));
 
     this.registerEvent(
       this.app.workspace.on("layout-change", () => {
@@ -167,7 +167,11 @@ export default class KnowledgeHeatMapPlugin extends Plugin {
   }
 
   async loadSettings() {
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    const loadedData = await this.loadData();
+    if (loadedData) {
+      delete loadedData.visits;
+    }
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, loadedData);
   }
 
   async saveSettings() {
@@ -244,7 +248,7 @@ export default class KnowledgeHeatMapPlugin extends Plugin {
       filteredNotes.forEach(note => {
         let score = this.cache.get(note.path);
         if (score === null) {
-          score = ScoreCalculator.calculate(note, this.settings.weights);
+          score = ScoreCalculator.calculate(note, this.settings.weights, this.settings.activeCriteria);
           this.cache.set(note.path, score);
         }
         scores[note.path] = score;
@@ -301,7 +305,7 @@ export default class KnowledgeHeatMapPlugin extends Plugin {
     workspace.revealLeaf(leaf);
   }
 
-  private refreshD3View(): void {
+  public refreshD3View(): void {
     const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_KNOWLEDGE_HEAT_MAP);
     leaves.forEach((leaf) => {
       if (leaf.view instanceof HeatMapView) {
@@ -310,17 +314,8 @@ export default class KnowledgeHeatMapPlugin extends Plugin {
     });
   }
 
-  private togglePanel(): void {
-    const t = getStrings();
-    const leaves = this.app.workspace.getLeavesOfType("graph");
-    const activeLeaf = leaves[0];
-    
-    if (!activeLeaf) {
-      new Notice(t.noGraphViewWarning);
-      return;
-    }
-    
-    const container = activeLeaf.view.containerEl;
+  private togglePanel(leaf: WorkspaceLeaf): void {
+    const container = leaf.view.containerEl;
     if (!container) return;
 
     const panel = new HeatSidePanel(

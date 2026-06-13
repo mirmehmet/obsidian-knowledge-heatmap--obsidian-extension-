@@ -4,3 +4,7 @@ main.js
 .DS_Store
 dist/
 coverage/
+
+AGENTS.md
+obsidian-knowledge-heatmap-blueprint.md
+err.md

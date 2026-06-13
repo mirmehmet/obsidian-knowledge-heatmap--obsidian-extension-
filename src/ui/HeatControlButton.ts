@@ -1,4 +1,4 @@
-import { App, Plugin } from "obsidian";
+import { App, Plugin, WorkspaceLeaf } from "obsidian";
 
 export class HeatControlButton {
   private buttons: Map<string, HTMLElement> = new Map();
@@ -6,20 +6,37 @@ export class HeatControlButton {
   constructor(
     private app: App,
     private plugin: Plugin,
-    private onToggle: () => void
+    private onToggle: (leaf: WorkspaceLeaf) => void
   ) {}
 
   public injectButtons(isActive: boolean): void {
     const leaves = this.app.workspace.getLeavesOfType("graph");
     
+    // Create a set of current active leaf IDs and assign stable runtime IDs
+    const activeLeafIds = new Set<string>();
+    leaves.forEach((leaf: any) => {
+      if (!leaf.id) {
+        leaf.id = "heat-leaf-" + Math.random().toString(36).substring(2, 9);
+      }
+      activeLeafIds.add(leaf.id);
+    });
+
+    // Remove buttons for leaves that are no longer active (closed tabs)
+    for (const [leafId, btn] of this.buttons.entries()) {
+      if (!activeLeafIds.has(leafId)) {
+        btn.remove();
+        this.buttons.delete(leafId);
+      }
+    }
+
     leaves.forEach((leaf: any) => {
       const container = leaf.view?.containerEl;
       if (!container) return;
 
-      // Unique identifier for the leaf
-      const leafId = leaf.id || container.id || String(leaves.indexOf(leaf));
+      const leafId = leaf.id;
+      const existingBtn = this.buttons.get(leafId);
       
-      if (this.buttons.has(leafId)) {
+      if (existingBtn && document.body.contains(existingBtn)) {
         this.updateButtonState(leafId, isActive);
         return;
       }
@@ -34,7 +51,7 @@ export class HeatControlButton {
         
         btn.addEventListener("click", (e) => {
           e.stopPropagation();
-          this.onToggle();
+          this.onToggle(leaf);
         });
 
         controlsContainer.appendChild(btn);

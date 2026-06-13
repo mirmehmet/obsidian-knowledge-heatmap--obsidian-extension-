@@ -196,13 +196,15 @@ export class HeatSidePanel {
       { id: "7d", name: t.timeRange7d },
     ];
     
+    const radioGroupName = `heat-time-range-${Math.random().toString(36).substring(2, 9)}`;
+    
     ranges.forEach((r) => {
       const label = timeRangeDiv.createEl("label", { cls: "heat-radio-label" });
       const radio = label.createEl("input", { 
-        type: "radio", 
-        name: "heat-time-range", 
-        value: r.id 
+        type: "radio"
       }) as HTMLInputElement;
+      radio.setAttribute("name", radioGroupName);
+      radio.value = r.id;
       radio.checked = this.settings.timeRange === r.id;
       label.appendChild(document.createTextNode(" " + r.name));
 

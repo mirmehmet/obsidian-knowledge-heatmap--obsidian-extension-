@@ -108,4 +108,40 @@ describe("ScoreCalculator", () => {
       })
     ).toBeCloseTo(0.5, 5);
   });
+
+  it("applies activeCriteria filters correctly", () => {
+    const mixNote: NoteData = {
+      path: "mix.md",
+      name: "mix",
+      daysSinceModified: 0, // recency score = 1.0
+      charCount: 0,         // contentLen score = 0.0
+      outlinks: 0,
+      inlinks: 0,
+      visitCount: 0,
+      tags: [],
+      frontmatter: {},
+    };
+
+    // 50% recency (value 1.0) and 50% contentLen (value 0.0)
+    // but recency is disabled -> score should be 0.0 (only contentLen is active)
+    expect(
+      ScoreCalculator.calculate(
+        mixNote,
+        {
+          recency: 50,
+          linkDensity: 0,
+          visitFreq: 0,
+          orphan: 0,
+          contentLen: 50,
+        },
+        {
+          recency: false,
+          linkDensity: true,
+          visitFreq: true,
+          orphan: true,
+          contentLen: true,
+        }
+      )
+    ).toBeCloseTo(0.0, 5);
+  });
 });

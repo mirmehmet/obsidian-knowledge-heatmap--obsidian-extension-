@@ -68,6 +68,7 @@ export class SettingsTab extends PluginSettingTab {
           .onChange(async (value) => {
             this.plugin.settings.palette = value as "amber" | "custom";
             await this.plugin.saveSettings();
+            this.onSettingsChanged();
             this.display(); 
           })
       );
@@ -81,6 +82,7 @@ export class SettingsTab extends PluginSettingTab {
             .onChange(async (value) => {
               this.plugin.settings.customColors.frozen = value;
               await this.plugin.saveSettings();
+              this.onSettingsChanged();
             })
         );
 
@@ -92,6 +94,7 @@ export class SettingsTab extends PluginSettingTab {
             .onChange(async (value) => {
               this.plugin.settings.customColors.cold = value;
               await this.plugin.saveSettings();
+              this.onSettingsChanged();
             })
         );
 
@@ -103,6 +106,7 @@ export class SettingsTab extends PluginSettingTab {
             .onChange(async (value) => {
               this.plugin.settings.customColors.warm = value;
               await this.plugin.saveSettings();
+              this.onSettingsChanged();
             })
         );
 
@@ -114,6 +118,7 @@ export class SettingsTab extends PluginSettingTab {
             .onChange(async (value) => {
               this.plugin.settings.customColors.hot = value;
               await this.plugin.saveSettings();
+              this.onSettingsChanged();
             })
         );
 
@@ -125,6 +130,7 @@ export class SettingsTab extends PluginSettingTab {
             .onChange(async (value) => {
               this.plugin.settings.customColors.burning = value;
               await this.plugin.saveSettings();
+              this.onSettingsChanged();
             })
         );
     }
@@ -160,6 +166,7 @@ export class SettingsTab extends PluginSettingTab {
               .filter((line) => line.length > 0);
             await this.plugin.saveSettings();
             this.plugin.cache.invalidateAll();
+            this.onSettingsChanged();
           })
       );
 
@@ -177,6 +184,7 @@ export class SettingsTab extends PluginSettingTab {
               .filter((line) => line.length > 0);
             await this.plugin.saveSettings();
             this.plugin.cache.invalidateAll();
+            this.onSettingsChanged();
           })
       );
 
@@ -191,5 +199,12 @@ export class SettingsTab extends PluginSettingTab {
             await this.plugin.saveSettings();
           })
       );
+  }
+
+  private onSettingsChanged(): void {
+    if (this.plugin.settings.enabled) {
+      this.plugin.debouncedApply();
+    }
+    this.plugin.refreshD3View();
   }
 }

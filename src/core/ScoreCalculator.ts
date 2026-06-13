@@ -1,8 +1,17 @@
 import { NoteData, Weights, HeatScore } from "./types";
 
 export class ScoreCalculator {
-  public static calculate(note: NoteData, weights: Weights): HeatScore {
+  public static calculate(
+    note: NoteData,
+    weights: Weights,
+    activeCriteria?: Record<string, boolean>
+  ): HeatScore {
     const totalLinks = note.inlinks + note.outlinks;
+
+    const isActive = (key: string): boolean => {
+      if (!activeCriteria) return true;
+      return activeCriteria[key] ?? true;
+    };
 
     const raw = {
       recency: Math.exp(-note.daysSinceModified / 30),
@@ -13,22 +22,22 @@ export class ScoreCalculator {
     };
 
     const totalWeight =
-      (weights.recency || 0) +
-      (weights.linkDensity || 0) +
-      (weights.visitFreq || 0) +
-      (weights.orphan || 0) +
-      (weights.contentLen || 0);
+      (isActive("recency") ? (weights.recency || 0) : 0) +
+      (isActive("linkDensity") ? (weights.linkDensity || 0) : 0) +
+      (isActive("visitFreq") ? (weights.visitFreq || 0) : 0) +
+      (isActive("orphan") ? (weights.orphan || 0) : 0) +
+      (isActive("contentLen") ? (weights.contentLen || 0) : 0);
 
     if (totalWeight === 0) {
       return 0;
     }
 
     let weightedSum = 0;
-    weightedSum += raw.recency * (weights.recency || 0);
-    weightedSum += raw.linkDensity * (weights.linkDensity || 0);
-    weightedSum += raw.visitFreq * (weights.visitFreq || 0);
-    weightedSum += raw.orphan * (weights.orphan || 0);
-    weightedSum += raw.contentLen * (weights.contentLen || 0);
+    weightedSum += isActive("recency") ? raw.recency * (weights.recency || 0) : 0;
+    weightedSum += isActive("linkDensity") ? raw.linkDensity * (weights.linkDensity || 0) : 0;
+    weightedSum += isActive("visitFreq") ? raw.visitFreq * (weights.visitFreq || 0) : 0;
+    weightedSum += isActive("orphan") ? raw.orphan * (weights.orphan || 0) : 0;
+    weightedSum += isActive("contentLen") ? raw.contentLen * (weights.contentLen || 0) : 0;
 
     const score = weightedSum / totalWeight;
 
