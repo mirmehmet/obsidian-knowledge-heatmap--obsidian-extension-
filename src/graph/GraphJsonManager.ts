@@ -2,20 +2,34 @@ import { App } from "obsidian";
 import { BucketMap, BucketName } from "../core/types";
 import { ColorMapper } from "../core/ColorMapper";
 
+/**
+ * Manages the read, write, backup, and restore operations on Obsidian's `.obsidian/graph.json` configuration file.
+ */
 export class GraphJsonManager {
   private readonly GRAPH_JSON_PATH = ".obsidian/graph.json";
   private backup: string | null = null;
 
   constructor(private app: App) {}
 
+  /**
+   * Retrieves the current in-memory backup of graph.json.
+   */
   public getBackup(): string | null {
     return this.backup;
   }
 
+  /**
+   * Overrides the in-memory backup string.
+   */
   public setBackup(backup: string | null): void {
     this.backup = backup;
   }
 
+  /**
+   * Reads and parses `.obsidian/graph.json` from the vault adapter.
+   * 
+   * @throws Error if the file contains malformed JSON structure.
+   */
   public async readGraphJson(): Promise<any> {
     const adapter = this.app.vault.adapter;
     if (await adapter.exists(this.GRAPH_JSON_PATH)) {
@@ -29,6 +43,13 @@ export class GraphJsonManager {
     return {};
   }
 
+  /**
+   * Maps calculated heat buckets to Obsidian graph color groups, chunks path queries to prevent overflows, 
+   * preserves existing user color configurations, and writes the updated config to disk.
+   * 
+   * @param buckets - Map categorizing note paths into their heat buckets.
+   * @param customColors - Custom palette colors defined in settings.
+   */
   public async applyHeatGroups(
     buckets: BucketMap,
     customColors?: Partial<Record<BucketName, string>>
@@ -80,10 +101,30 @@ export class GraphJsonManager {
     await adapter.write(this.GRAPH_JSON_PATH, JSON.stringify(currentGraph, null, 2));
   }
 
+  /**
+   * Restores `.obsidian/graph.json` to its pre-heatmap state.
+   * Falls back to a clean filtering of query rules containing `path:"` if no backup exists.
+   */
   public async restore(): Promise<void> {
-    if (!this.backup) return;
     const adapter = this.app.vault.adapter;
-    await adapter.write(this.GRAPH_JSON_PATH, this.backup);
-    this.backup = null;
+    if (this.backup) {
+      await adapter.write(this.GRAPH_JSON_PATH, this.backup);
+      this.backup = null;
+    } else {
+      if (await adapter.exists(this.GRAPH_JSON_PATH)) {
+        try {
+          const content = await adapter.read(this.GRAPH_JSON_PATH);
+          const currentGraph = JSON.parse(content);
+          if (currentGraph && Array.isArray(currentGraph.colorGroups)) {
+            currentGraph.colorGroups = currentGraph.colorGroups.filter((g: any) => {
+              return !g.query || !g.query.includes('path:"');
+            });
+            await adapter.write(this.GRAPH_JSON_PATH, JSON.stringify(currentGraph, null, 2));
+          }
+        } catch (err) {
+          console.error("KnowledgeHeatMap: Fallback restore failed", err);
+        }
+      }
+    }
   }
 }

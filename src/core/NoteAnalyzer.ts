@@ -1,9 +1,19 @@
 import { App, TFile } from "obsidian";
 import { NoteData } from "./types";
 
+/**
+ * Scans the vault to collect, normalize, and filter note metrics utilizing Obsidian's metadataCache.
+ * Designed to optimize performance on large vaults through chunked background processing.
+ */
 export class NoteAnalyzer {
   constructor(private app: App) {}
 
+  /**
+   * Pre-calculates incoming link counts for all nodes in the vault by parsing the resolved links cache.
+   * 
+   * @param resolvedLinks - Obsidian's resolved links dictionary map from metadataCache.
+   * @returns A dictionary mapping file paths to their incoming link count.
+   */
   public static computeAllInlinks(resolvedLinks: Record<string, Record<string, number>>): Record<string, number> {
     const inlinkCounts: Record<string, number> = {};
     for (const sourcePath in resolvedLinks) {
@@ -15,6 +25,15 @@ export class NoteAnalyzer {
     return inlinkCounts;
   }
 
+  /**
+   * Builds NoteData metric details for a single file using Obsidian's index caches.
+   * Does not perform raw file reading (I/O) to keep performance fast.
+   * 
+   * @param file - The target Markdown file.
+   * @param inlinkCounts - Pre-calculated vault-wide inlinks map.
+   * @param visitCounts - Map of accumulated file-open visit counts.
+   * @returns Constructed NoteData containing collected metrics.
+   */
   public collectNoteData(
     file: TFile,
     inlinkCounts: Record<string, number>,
@@ -57,6 +76,14 @@ export class NoteAnalyzer {
     };
   }
 
+  /**
+   * Filters out notes belonging to excluded folders or matching excluded tags.
+   * 
+   * @param notes - Note list to filter.
+   * @param excludeFolders - List of folder paths to exclude.
+   * @param excludeTags - List of tags to exclude.
+   * @returns Filtered list of NoteData.
+   */
   public filterNotes(
     notes: NoteData[],
     excludeFolders: string[],
@@ -82,6 +109,16 @@ export class NoteAnalyzer {
     });
   }
 
+  /**
+   * Analyzes the entire vault asynchronously, processing notes in chunks to avoid UI lag.
+   * 
+   * @param files - All Markdown files to process.
+   * @param visitCounts - Map of accumulated file-open visit counts.
+   * @param excludeFolders - Folders excluded in plugin settings.
+   * @param excludeTags - Tags excluded in plugin settings.
+   * @param onProgress - Callback triggered after processing each chunk, returning progress percentage (0-100).
+   * @returns Filtered list of NoteData containing metrics for all relevant notes.
+   */
   public async analyzeVaultChunked(
     files: TFile[],
     visitCounts: Record<string, number>,

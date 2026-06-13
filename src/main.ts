@@ -138,13 +138,16 @@ export default class KnowledgeHeatMapPlugin extends Plugin {
     this.setupRefreshInterval();
 
     this.app.workspace.onLayoutReady(async () => {
-      this.controlButton.injectButtons(this.settings.enabled);
-      
       if (this.settings.enableOnStartup) {
         this.settings.enabled = true;
         await this.saveSettings();
-        this.controlButton.updateAllButtonsState(true);
+        this.controlButton.injectButtons(true);
         await this.applyHeatMap();
+      } else {
+        this.settings.enabled = false;
+        await this.saveSettings();
+        this.controlButton.injectButtons(false);
+        await this.restoreGraphView();
       }
     });
   }
@@ -224,12 +227,27 @@ export default class KnowledgeHeatMapPlugin extends Plugin {
       const visitCounts = this.visitTracker.getVisits();
       
       const noteAnalyzer = new NoteAnalyzer(this.app);
+      
+      let progressNotice: Notice | null = null;
+      if (this.settings.showNotifications) {
+        progressNotice = new Notice(`${t.legendCold === "❄️ Soğuk" ? "Isı haritası hesaplanıyor" : "Calculating heat map"}... 0%`, 0);
+      }
+
       const notesData = await noteAnalyzer.analyzeVaultChunked(
         files,
         visitCounts,
         this.settings.excludeFolders,
-        this.settings.excludeTags
+        this.settings.excludeTags,
+        (progress) => {
+          if (progressNotice) {
+            progressNotice.setMessage(`${t.legendCold === "❄️ Soğuk" ? "Isı haritası hesaplanıyor" : "Calculating heat map"}... ${progress}%`);
+          }
+        }
       );
+
+      if (progressNotice) {
+        progressNotice.hide();
+      }
 
       let filteredNotes = notesData;
       if (this.settings.minNoteAgeDays > 0) {

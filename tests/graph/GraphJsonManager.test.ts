@@ -120,4 +120,43 @@ describe("GraphJsonManager", () => {
     expect(manager.getBackup()).toBeNull();
     expect(restoredContent).toBe(originalConfig);
   });
+
+  it("performs fallback restore when backup is null", async () => {
+    const graphWithHeatGroups = JSON.stringify({
+      colorGroups: [
+        { query: "tag:#todo", color: { a: 1, rgb: 12345 } },
+        { query: 'path:"FrozenNote.md"', color: { a: 1, rgb: 993602 } },
+        { query: 'path:"BurningNote.md"', color: { a: 1, rgb: 15680580 } },
+      ],
+    });
+
+    let writtenContent = "";
+    const mockAdapter: any = {
+      exists: vi.fn().mockResolvedValue(true),
+      read: vi.fn().mockResolvedValue(graphWithHeatGroups),
+      write: vi.fn().mockImplementation((path, content) => {
+        writtenContent = content;
+        return Promise.resolve();
+      }),
+    };
+    const mockApp: any = {
+      vault: {
+        adapter: mockAdapter,
+      },
+    };
+
+    const manager = new GraphJsonManager(mockApp);
+    // backup remains null
+
+    await manager.restore();
+
+    expect(mockAdapter.exists).toHaveBeenCalledWith(".obsidian/graph.json");
+    expect(mockAdapter.read).toHaveBeenCalledWith(".obsidian/graph.json");
+    expect(mockAdapter.write).toHaveBeenCalledWith(".obsidian/graph.json", expect.any(String));
+
+    const parsed = JSON.parse(writtenContent);
+    expect(parsed.colorGroups).toEqual([
+      { query: "tag:#todo", color: { a: 1, rgb: 12345 } },
+    ]);
+  });
 });

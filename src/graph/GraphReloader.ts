@@ -1,6 +1,18 @@
 import { App, Notice } from "obsidian";
 
+/**
+ * Handles hot-reloading and syncing graph configurations into active Obsidian Graph View panels.
+ */
 export class GraphReloader {
+  /**
+   * Forces Obsidian to redraw and reload all active native Graph Views.
+   * Direct synchronization is attempted first. If direct sync fails or is not supported by the view instance, 
+   * a hard view-state reload fallback is performed.
+   * 
+   * @param app - The active Obsidian App instance.
+   * @param showNotifications - Whether to display notice popups on failures.
+   * @returns Promise resolving to true if reload succeeded, or false if no graph views are open.
+   */
   public static async reload(app: App, showNotifications = true): Promise<boolean> {
     const leaves = app.workspace.getLeavesOfType("graph");
     if (leaves.length === 0) {

@@ -1,6 +1,17 @@
 import { NoteData, Weights, HeatScore } from "./types";
 
+/**
+ * Engine to calculate the final weighted heat score for individual notes.
+ */
 export class ScoreCalculator {
+  /**
+   * Calculates the weighted heat score for a note based on configured weight parameters and active criteria.
+   * 
+   * @param note - Collected metrics for the target note.
+   * @param weights - Configured weights for each metric.
+   * @param activeCriteria - Optional mapping of whether each metric criteria is enabled.
+   * @returns Calculated normalized heat score strictly within [0.0, 1.0].
+   */
   public static calculate(
     note: NoteData,
     weights: Weights,

@@ -1,6 +1,6 @@
 {
   "name": "knowledge-heatmap",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "Visualizes your vault's activity and connectivity as a heat map in Graph View.",
   "main": "main.js",
   "scripts": {

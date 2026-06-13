@@ -5,7 +5,11 @@ export interface ColorInfo {
   rgb: number;
 }
 
+/**
+ * Handles color mapping, conversions, and default visual settings for heat map score representations.
+ */
 export class ColorMapper {
+  /** Default color hex codes for each of the 5 heat buckets. */
   public static readonly DEFAULT_COLORS: Record<BucketName, string> = {
     frozen: "#0f2942",
     cold: "#1e5c8a",
@@ -14,6 +18,13 @@ export class ColorMapper {
     burning: "#ef4444",
   };
 
+  /**
+   * Converts a hex color string into a decimal integer color code as required by Obsidian's graph.json schema.
+   * e.g., `#f59e0b` -> `16072715`.
+   * 
+   * @param hex - Hexadecimal color representation (e.g. "#fff", "#ef4444").
+   * @returns Decimal integer representation of the RGB color value.
+   */
   public static hexToRgbInt(hex: string): number {
     let cleanHex = hex.replace("#", "").trim();
     if (cleanHex.length === 3) {
@@ -25,6 +36,12 @@ export class ColorMapper {
     return r * 65536 + g * 256 + b;
   }
 
+  /**
+   * Decides which heat bucket a given score belongs to based on score thresholds.
+   * 
+   * @param score - Calculated normalized heat score in the range [0.0, 1.0].
+   * @returns The BucketName corresponding to the score.
+   */
   public static getBucketName(score: number): BucketName {
     if (score < 0.2) return "frozen";
     if (score < 0.4) return "cold";
@@ -33,6 +50,14 @@ export class ColorMapper {
     return "burning";
   }
 
+  /**
+   * Resolves the hex code and decimal integer representation for a specific heat bucket.
+   * Supports falling back to defaults if a custom palette color is missing.
+   * 
+   * @param bucket - The name of the target heat bucket.
+   * @param customColors - Optional override colors for each bucket.
+   * @returns ColorInfo containing both hex string and decimal RGB representations.
+   */
   public static getColor(bucket: BucketName, customColors?: Partial<Record<BucketName, string>>): ColorInfo {
     const hex = (customColors && customColors[bucket]) || this.DEFAULT_COLORS[bucket];
     return {

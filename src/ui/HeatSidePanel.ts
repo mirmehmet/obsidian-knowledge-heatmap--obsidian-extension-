@@ -40,6 +40,11 @@ export class HeatSidePanel {
     setTimeout(() => {
       if (this.panelEl) this.panelEl.classList.add("is-open");
       if (this.overlayEl) this.overlayEl.classList.add("is-open");
+      
+      const closeBtn = this.panelEl?.querySelector(".clickable-icon");
+      if (closeBtn instanceof HTMLElement) {
+        closeBtn.focus();
+      }
     }, 10);
   }
 
@@ -154,6 +159,8 @@ export class HeatSidePanel {
       const label = headerRow.createEl("label");
       
       const checkbox = label.createEl("input", { type: "checkbox" }) as HTMLInputElement;
+      checkbox.setAttribute("aria-label", c.name);
+      checkbox.setAttribute("tabindex", "0");
       checkbox.checked = this.settings.activeCriteria[c.id] ?? true;
       label.appendChild(document.createTextNode(" " + c.name));
 

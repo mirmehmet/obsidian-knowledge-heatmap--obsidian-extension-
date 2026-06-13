@@ -125,6 +125,8 @@ export class D3Renderer {
       .selectAll("g")
       .data(nodes)
       .join("g")
+      .attr("tabindex", "0")
+      .style("outline", "none")
       .call(
         d3
           .drag<any, HeatNode>()
@@ -132,6 +134,26 @@ export class D3Renderer {
           .on("drag", dragged)
           .on("end", dragended)
       );
+
+    node
+      .on("focus", function() {
+        d3.select(this)
+          .select("circle")
+          .attr("stroke", "var(--interactive-accent)")
+          .attr("stroke-width", "2px");
+      })
+      .on("blur", function() {
+        d3.select(this)
+          .select("circle")
+          .attr("stroke", null)
+          .attr("stroke-width", null);
+      })
+      .on("keydown", (event: KeyboardEvent, d) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          this.onNodeClick(d.id);
+        }
+      });
 
     node
       .append("circle")
