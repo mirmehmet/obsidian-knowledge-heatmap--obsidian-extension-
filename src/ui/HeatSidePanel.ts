@@ -165,9 +165,9 @@ export class HeatSidePanel {
       label.appendChild(document.createTextNode(" " + c.name));
 
       const weightSpan = headerRow.createEl("span", { 
-        cls: "heat-weight-percentage", 
-        text: checkbox.checked ? `[${this.settings.weights[key]}%]` : t.panelWeightDisabled 
+        cls: "heat-weight-percentage"
       });
+      weightSpan.setAttribute("data-criterion-id", c.id);
 
       const sliderContainer = row.createEl("div", { cls: "heat-slider-container" });
       const slider = new SliderComponent(sliderContainer)
@@ -176,7 +176,7 @@ export class HeatSidePanel {
         .setDisabled(!checkbox.checked)
         .onChange((val) => {
           this.settings.weights[key] = val;
-          weightSpan.setText(`[${val}%]`);
+          this.updateWeightPercentages(dynamicSection);
           this.callbacks.onSettingsChange();
         });
 
@@ -184,12 +184,7 @@ export class HeatSidePanel {
         const isChecked = checkbox.checked;
         this.settings.activeCriteria[c.id] = isChecked;
         slider.setDisabled(!isChecked);
-        
-        if (!isChecked) {
-          weightSpan.setText(t.panelWeightDisabled);
-        } else {
-          weightSpan.setText(`[${this.settings.weights[key]}%]`);
-        }
+        this.updateWeightPercentages(dynamicSection);
         this.callbacks.onSettingsChange();
       });
     });
@@ -238,6 +233,35 @@ export class HeatSidePanel {
     openViewBtn.buttonEl.addEventListener("click", () => {
       this.callbacks.onOpenHeatView();
       this.close();
+    });
+
+    this.updateWeightPercentages(dynamicSection);
+  }
+
+  private updateWeightPercentages(contentEl: HTMLElement): void {
+    const t = getStrings();
+    const weights = this.settings.weights;
+    const active = this.settings.activeCriteria;
+
+    let totalActiveWeight = 0;
+    const criteriaIds = ["recency", "linkDensity", "visitFreq", "orphan", "contentLen"];
+    criteriaIds.forEach((id) => {
+      if (active[id]) {
+        totalActiveWeight += weights[id as keyof Weights] || 0;
+      }
+    });
+
+    criteriaIds.forEach((id) => {
+      const span = contentEl.querySelector(`.heat-weight-percentage[data-criterion-id="${id}"]`);
+      if (span instanceof HTMLElement) {
+        if (!active[id]) {
+          span.setText(t.panelWeightDisabled);
+        } else {
+          const val = weights[id as keyof Weights] || 0;
+          const net = totalActiveWeight > 0 ? Math.round((val / totalActiveWeight) * 100) : 0;
+          span.setText(`[${val}% → Net: ${net}%]`);
+        }
+      }
     });
   }
 

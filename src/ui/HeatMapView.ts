@@ -15,6 +15,8 @@ export class HeatMapView extends ItemView {
   private legend: HeatLegend | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private graphContainerEl: HTMLElement;
+  private searchQuery = "";
+  private filterType = "all";
 
   constructor(leaf: WorkspaceLeaf, private plugin: any) {
     super(leaf);
@@ -54,6 +56,35 @@ export class HeatMapView extends ItemView {
     settingsBtn.addEventListener("click", () => {
       (this.app as any).setting?.open();
       (this.app as any).setting?.openTabById(this.plugin.manifest.id);
+    });
+
+    // Search Box
+    const searchWrapper = sidebar.createEl("div", { cls: "heat-sidebar-search-wrapper" });
+    const searchInput = searchWrapper.createEl("input", {
+      type: "text",
+      placeholder: t.d3SearchPlaceholder,
+      cls: "heat-sidebar-search-input"
+    }) as HTMLInputElement;
+    searchInput.value = this.searchQuery;
+    searchInput.addEventListener("input", () => {
+      this.searchQuery = searchInput.value;
+      if (this.d3Renderer) {
+        this.d3Renderer.highlightNodes(this.searchQuery);
+      }
+    });
+
+    // Filter Dropdown
+    const filterWrapper = sidebar.createEl("div", { cls: "heat-sidebar-filter-wrapper" });
+    filterWrapper.createEl("label", { text: t.d3FilterLabel, cls: "heat-sidebar-filter-label" });
+    const filterSelect = filterWrapper.createEl("select", { cls: "heat-sidebar-filter-select" }) as HTMLSelectElement;
+    filterSelect.createEl("option", { value: "all", text: t.d3FilterAll });
+    filterSelect.createEl("option", { value: "orphans", text: t.d3FilterOrphans });
+    filterSelect.createEl("option", { value: "burning", text: t.d3FilterBurning });
+    filterSelect.createEl("option", { value: "cold", text: t.d3FilterCold });
+    filterSelect.value = this.filterType;
+    filterSelect.addEventListener("change", () => {
+      this.filterType = filterSelect.value;
+      this.refresh();
     });
 
     const statsContainer = sidebar.createEl("div", { cls: "heat-view-stats-container" });
@@ -147,7 +178,21 @@ export class HeatMapView extends ItemView {
         scores[note.path] = score;
       });
 
-      const buckets = BucketSorter.sort(scores);
+      // Apply sidebar quick filters
+      if (this.filterType === "orphans") {
+        filteredNotes = filteredNotes.filter(note => note.inlinks + note.outlinks === 0);
+      } else if (this.filterType === "burning") {
+        filteredNotes = filteredNotes.filter(note => (scores[note.path] ?? 0) >= 0.8);
+      } else if (this.filterType === "cold") {
+        filteredNotes = filteredNotes.filter(note => (scores[note.path] ?? 0) < 0.4);
+      }
+
+      const filteredScores: Record<string, number> = {};
+      filteredNotes.forEach(note => {
+        filteredScores[note.path] = scores[note.path];
+      });
+
+      const buckets = BucketSorter.sort(filteredScores);
       const resolvedLinks = this.app.metadataCache.resolvedLinks;
 
       if (this.d3Renderer) {
@@ -157,6 +202,7 @@ export class HeatMapView extends ItemView {
           resolvedLinks,
           this.plugin.settings.palette === "custom" ? this.plugin.settings.customColors : undefined
         );
+        this.d3Renderer.highlightNodes(this.searchQuery);
       }
 
       if (this.statsPanel) {

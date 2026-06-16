@@ -62,6 +62,10 @@ export const STRINGS = {
     settingsExcludeTagsDesc: "Isı haritası hesaplamasından dışlanacak etiketler (her satıra bir tane yazın, örn: #private).",
     settingsDebugName: "Geliştirici Modu (Debug Mode)",
     settingsDebugDesc: "Konsola daha fazla günlükleme (logging) bilgisi basar.",
+    settingsMinNoteAgeDaysName: "Minimum Not Yaşı (Gün)",
+    settingsMinNoteAgeDaysDesc: "Bu değerden daha yeni notları ısı haritasına dahil etmez (0 = Tüm notları dahil et).",
+    settingsDefaultTimeRangeName: "Varsayılan Zaman Aralığı",
+    settingsDefaultTimeRangeDesc: "Eklenti açıldığında varsayılan olarak uygulanacak zaman penceresi.",
     
     // D3 View & Stats Panel
     d3ViewTitle: "Knowledge Heat Map",
@@ -74,7 +78,18 @@ export const STRINGS = {
     statsNotesSuffix: "not",
     legendCold: "❄️ Soğuk",
     legendWarm: "Sıcaklık Skalası",
-    legendHot: "Sıcak 🔥"
+    legendHot: "Sıcak 🔥",
+    tooltipLastModified: "Son Değişiklik:",
+    tooltipLinks: "Bağlantılar:",
+    tooltipVisitCount: "Ziyaret Sıklığı:",
+    tooltipSize: "Boyut:",
+    tooltipDaysAgo: "gün önce",
+    d3SearchPlaceholder: "Not adı ara...",
+    d3FilterLabel: "Filtrele:",
+    d3FilterAll: "Tüm Notlar",
+    d3FilterOrphans: "Yalnız (Orphan) Notlar",
+    d3FilterBurning: "Çok Sıcak (Burning) Notlar",
+    d3FilterCold: "Soğuk (Cold/Frozen) Notlar",
   },
   en: {
     pluginLoading: "Loading Knowledge Heat Map plugin...",
@@ -139,6 +154,10 @@ export const STRINGS = {
     settingsExcludeTagsDesc: "Tags excluded from heat map analysis (one per line, e.g. #private).",
     settingsDebugName: "Debug Mode",
     settingsDebugDesc: "Log more debug info to console.",
+    settingsMinNoteAgeDaysName: "Minimum Note Age (Days)",
+    settingsMinNoteAgeDaysDesc: "Excludes notes newer than this number of days from calculation (0 = Include all notes).",
+    settingsDefaultTimeRangeName: "Default Time Range",
+    settingsDefaultTimeRangeDesc: "The default time window to apply when the plugin loads.",
     
     // D3 View & Stats Panel
     d3ViewTitle: "Knowledge Heat Map",
@@ -151,7 +170,18 @@ export const STRINGS = {
     statsNotesSuffix: "notes",
     legendCold: "❄️ Cold",
     legendWarm: "Heat Scale",
-    legendHot: "Hot 🔥"
+    legendHot: "Hot 🔥",
+    tooltipLastModified: "Last Modified:",
+    tooltipLinks: "Links:",
+    tooltipVisitCount: "Visit Count:",
+    tooltipSize: "Size:",
+    tooltipDaysAgo: "days ago",
+    d3SearchPlaceholder: "Search note name...",
+    d3FilterLabel: "Filter:",
+    d3FilterAll: "All Notes",
+    d3FilterOrphans: "Orphan Notes Only",
+    d3FilterBurning: "Burning Notes Only",
+    d3FilterCold: "Cold/Frozen Notes Only",
   }
 };
 

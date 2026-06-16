@@ -73,6 +73,23 @@ export class SettingsTab extends PluginSettingTab {
           })
       );
 
+    new Setting(containerEl)
+      .setName(t.settingsDefaultTimeRangeName)
+      .setDesc(t.settingsDefaultTimeRangeDesc)
+      .addDropdown((dropdown) =>
+        dropdown
+          .addOption("all", t.timeRangeAll)
+          .addOption("90d", t.timeRange90d)
+          .addOption("30d", t.timeRange30d)
+          .addOption("7d", t.timeRange7d)
+          .setValue(this.plugin.settings.timeRange)
+          .onChange(async (value) => {
+            this.plugin.settings.timeRange = value;
+            await this.plugin.saveSettings();
+            this.onSettingsChanged();
+          })
+      );
+
     if (this.plugin.settings.palette === "custom") {
       new Setting(containerEl)
         .setName(t.legendCold === "❄️ Soğuk" ? "Frozen (En Soğuk) Rengi" : "Frozen (Coldest) Color")
@@ -184,6 +201,21 @@ export class SettingsTab extends PluginSettingTab {
               .filter((line) => line.length > 0);
             await this.plugin.saveSettings();
             this.plugin.cache.invalidateAll();
+            this.onSettingsChanged();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName(t.settingsMinNoteAgeDaysName)
+      .setDesc(t.settingsMinNoteAgeDaysDesc)
+      .addText((text) =>
+        text
+          .setPlaceholder("0")
+          .setValue(String(this.plugin.settings.minNoteAgeDays))
+          .onChange(async (value) => {
+            const num = parseInt(value, 10);
+            this.plugin.settings.minNoteAgeDays = isNaN(num) ? 0 : num;
+            await this.plugin.saveSettings();
             this.onSettingsChanged();
           })
       );

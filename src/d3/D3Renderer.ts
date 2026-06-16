@@ -10,6 +10,9 @@ export class D3Renderer {
   private g: d3.Selection<SVGGElement, unknown, null, undefined>;
   private simulation: d3.Simulation<HeatNode, HeatLink>;
   private tooltip: NodeTooltip;
+  private nodeSelection: d3.Selection<any, HeatNode, any, any>;
+  private linkSelection: d3.Selection<any, HeatLink, any, any>;
+  private activeSearchQuery = "";
 
   constructor(
     private container: HTMLElement,
@@ -102,6 +105,8 @@ export class D3Renderer {
       .attr("stroke-opacity", 0.35)
       .attr("stroke-width", (d) => Math.min(5, 1 + d.value));
 
+    this.linkSelection = link;
+
     const dragstarted = (event: d3.D3DragEvent<any, HeatNode, HeatNode>, d: HeatNode) => {
       if (!event.active) this.simulation.alphaTarget(0.3).restart();
       d.fx = d.x;
@@ -127,6 +132,7 @@ export class D3Renderer {
       .join("g")
       .attr("tabindex", "0")
       .style("outline", "none")
+      .classed("heat-node-burning", (d) => d.score >= 0.8)
       .call(
         d3
           .drag<any, HeatNode>()
@@ -134,6 +140,8 @@ export class D3Renderer {
           .on("drag", dragged)
           .on("end", dragended)
       );
+
+    this.nodeSelection = node;
 
     node
       .on("focus", function() {
@@ -163,12 +171,14 @@ export class D3Renderer {
       .style("cursor", "pointer")
       .on("mouseover", (event, d) => {
         this.tooltip.show(event, d);
+        this.handleNodeHover(d);
       })
       .on("mousemove", (event) => {
         this.tooltip.updatePosition(event);
       })
       .on("mouseout", () => {
         this.tooltip.hide();
+        this.handleNodeHoverEnd();
       })
       .on("click", (event, d) => {
         event.stopPropagation();
@@ -207,6 +217,87 @@ export class D3Renderer {
 
       node.attr("transform", (d) => `translate(${d.x!}, ${d.y!})`);
     });
+
+    if (this.activeSearchQuery) {
+      this.highlightNodes(this.activeSearchQuery);
+    }
+  }
+
+  private handleNodeHover(targetNode: HeatNode): void {
+    if (!this.linkSelection || !this.nodeSelection) return;
+
+    const connectedNodeIds = new Set<string>();
+    connectedNodeIds.add(targetNode.id);
+
+    this.linkSelection.each((l) => {
+      const sourceId = typeof l.source === "object" ? l.source.id : l.source;
+      const targetId = typeof l.target === "object" ? l.target.id : l.target;
+      if (sourceId === targetNode.id) {
+        connectedNodeIds.add(targetId);
+      } else if (targetId === targetNode.id) {
+        connectedNodeIds.add(sourceId);
+      }
+    });
+
+    this.linkSelection
+      .transition()
+      .duration(150)
+      .attr("stroke", (l) => {
+        const sourceId = typeof l.source === "object" ? l.source.id : l.source;
+        const targetId = typeof l.target === "object" ? l.target.id : l.target;
+        return (sourceId === targetNode.id || targetId === targetNode.id)
+          ? "var(--interactive-accent)"
+          : "var(--border-color)";
+      })
+      .attr("stroke-opacity", (l) => {
+        const sourceId = typeof l.source === "object" ? l.source.id : l.source;
+        const targetId = typeof l.target === "object" ? l.target.id : l.target;
+        return (sourceId === targetNode.id || targetId === targetNode.id) ? 0.9 : 0.05;
+      });
+
+    this.nodeSelection
+      .transition()
+      .duration(150)
+      .style("opacity", (n) => connectedNodeIds.has(n.id) ? 1.0 : 0.15);
+  }
+
+  private handleNodeHoverEnd(): void {
+    if (!this.linkSelection || !this.nodeSelection) return;
+
+    this.linkSelection
+      .transition()
+      .duration(150)
+      .attr("stroke", "var(--border-color)")
+      .attr("stroke-opacity", 0.35);
+
+    if (this.activeSearchQuery) {
+      this.highlightNodes(this.activeSearchQuery);
+    } else {
+      this.nodeSelection
+        .transition()
+        .duration(150)
+        .style("opacity", 1.0);
+    }
+  }
+
+  public highlightNodes(searchQuery: string): void {
+    this.activeSearchQuery = searchQuery.trim().toLowerCase();
+    if (!this.nodeSelection) return;
+
+    if (!this.activeSearchQuery) {
+      this.nodeSelection
+        .transition()
+        .duration(150)
+        .style("opacity", 1.0);
+      return;
+    }
+
+    this.nodeSelection
+      .transition()
+      .duration(150)
+      .style("opacity", (n) => 
+        n.name.toLowerCase().includes(this.activeSearchQuery) ? 1.0 : 0.15
+      );
   }
 
   public resize(width: number, height: number): void {

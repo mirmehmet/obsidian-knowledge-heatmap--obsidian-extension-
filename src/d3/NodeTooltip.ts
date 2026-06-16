@@ -1,5 +1,6 @@
 import { HeatNode } from "./D3Types";
 import { ColorMapper } from "../core/ColorMapper";
+import { getStrings } from "../utils/strings";
 
 export class NodeTooltip {
   private tooltipEl: HTMLElement;
@@ -18,6 +19,7 @@ export class NodeTooltip {
   }
 
   public show(event: MouseEvent, node: HeatNode): void {
+    const t = getStrings();
     const bucketName = ColorMapper.getBucketName(node.score);
     const bucketLabel = bucketName.toUpperCase();
 
@@ -30,19 +32,19 @@ export class NodeTooltip {
       </div>
       <div class="tooltip-divider"></div>
       <div class="tooltip-row">
-        <span>Son Değişiklik:</span>
-        <span>${node.daysSinceModified.toFixed(1)} gün önce</span>
+        <span>${t.tooltipLastModified}</span>
+        <span>${node.daysSinceModified.toFixed(1)} ${t.tooltipDaysAgo}</span>
       </div>
       <div class="tooltip-row">
-        <span>Bağlantılar:</span>
+        <span>${t.tooltipLinks}</span>
         <span>${node.inlinks} in / ${node.outlinks} out</span>
       </div>
       <div class="tooltip-row">
-        <span>Ziyaret Sayısı:</span>
+        <span>${t.tooltipVisitCount}</span>
         <span>${node.visitCount}</span>
       </div>
       <div class="tooltip-row">
-        <span>Boyut:</span>
+        <span>${t.tooltipSize}</span>
         <span>${(node.charCount / 1024).toFixed(2)} KB</span>
       </div>
     `;
