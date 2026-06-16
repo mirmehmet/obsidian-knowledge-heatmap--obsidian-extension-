@@ -97,66 +97,36 @@ export class SettingsTab extends PluginSettingTab {
       );
 
     if (this.plugin.settings.palette === "custom") {
-      new Setting(containerEl)
-        .setName(t.colorFrozenName)
-        .addText((text) =>
-          text
-            .setValue(this.plugin.settings.customColors.frozen)
-            .onChange(async (value) => {
-              this.plugin.settings.customColors.frozen = value;
-              await this.plugin.saveSettings();
-              this.onSettingsChanged();
-            })
-        );
+      const colorKeys: { key: keyof typeof this.plugin.settings.customColors; name: string }[] = [
+        { key: "frozen", name: t.colorFrozenName },
+        { key: "cold", name: t.colorColdName },
+        { key: "warm", name: t.colorWarmName },
+        { key: "hot", name: t.colorHotName },
+        { key: "burning", name: t.colorBurningName },
+      ];
 
-      new Setting(containerEl)
-        .setName(t.colorColdName)
-        .addText((text) =>
-          text
-            .setValue(this.plugin.settings.customColors.cold)
-            .onChange(async (value) => {
-              this.plugin.settings.customColors.cold = value;
-              await this.plugin.saveSettings();
-              this.onSettingsChanged();
-            })
-        );
-
-      new Setting(containerEl)
-        .setName(t.colorWarmName)
-        .addText((text) =>
-          text
-            .setValue(this.plugin.settings.customColors.warm)
-            .onChange(async (value) => {
-              this.plugin.settings.customColors.warm = value;
-              await this.plugin.saveSettings();
-              this.onSettingsChanged();
-            })
-        );
-
-      new Setting(containerEl)
-        .setName(t.colorHotName)
-        .addText((text) =>
-          text
-            .setValue(this.plugin.settings.customColors.hot)
-            .onChange(async (value) => {
-              this.plugin.settings.customColors.hot = value;
-              await this.plugin.saveSettings();
-              this.onSettingsChanged();
-            })
-        );
-
-      new Setting(containerEl)
-        .setName(t.colorBurningName)
-        .addText((text) =>
-          text
-            .setValue(this.plugin.settings.customColors.burning)
-            .onChange(async (value) => {
-              this.plugin.settings.customColors.burning = value;
-              await this.plugin.saveSettings();
-              this.onSettingsChanged();
-            })
-        );
+      for (const { key, name } of colorKeys) {
+        new Setting(containerEl)
+          .setName(name)
+          .addText((text) =>
+            text
+              .setValue(this.plugin.settings.customColors[key])
+              .onChange(async (value) => {
+                if (this.isValidHex(value)) {
+                  this.plugin.settings.customColors[key] = value;
+                  await this.plugin.saveSettings();
+                  this.onSettingsChanged();
+                  text.inputEl.style.borderColor = "";
+                } else {
+                  text.inputEl.style.borderColor = "#ef4444";
+                }
+              })
+          );
+      }
     }
+
+    // F2: Palette preview strip
+    this.renderPalettePreview(containerEl);
 
     containerEl.createEl("h3", { text: t.settingsAdvancedHeader });
 
@@ -244,5 +214,29 @@ export class SettingsTab extends PluginSettingTab {
       this.plugin.debouncedApply();
     }
     this.plugin.refreshD3View();
+  }
+
+  // D6: Hex color validation
+  private isValidHex(value: string): boolean {
+    return /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(value.trim());
+  }
+
+  // F2: Palette preview strip
+  private renderPalettePreview(containerEl: HTMLElement): void {
+    const existing = containerEl.querySelector(".heat-palette-preview");
+    if (existing) existing.remove();
+
+    const { ColorMapper } = require("../core/ColorMapper");
+    const palette = this.plugin.settings.palette === "custom"
+      ? this.plugin.settings.customColors
+      : ColorMapper.getPaletteColors(this.plugin.settings.palette);
+
+    const previewEl = containerEl.createEl("div", { cls: "heat-palette-preview" });
+    const bucketNames = ["frozen", "cold", "warm", "hot", "burning"] as const;
+    for (const name of bucketNames) {
+      const swatch = previewEl.createEl("div", { cls: "heat-palette-swatch" });
+      swatch.style.backgroundColor = palette[name] || "#000";
+      swatch.setAttribute("title", name.charAt(0).toUpperCase() + name.slice(1));
+    }
   }
 }

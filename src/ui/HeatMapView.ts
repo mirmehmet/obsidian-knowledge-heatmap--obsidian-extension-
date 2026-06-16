@@ -9,6 +9,7 @@ import { ColorMapper } from "../core/ColorMapper";
 import { getStrings } from "../utils/strings";
 import { Logger } from "../utils/logger";
 import { ExportUtils } from "../utils/ExportUtils";
+import { MiniMap } from "../d3/MiniMap";
 import type KnowledgeHeatMapPlugin from "../main";
 
 export const VIEW_TYPE_KNOWLEDGE_HEAT_MAP = "knowledge-heat-map";
@@ -23,6 +24,7 @@ export class HeatMapView extends ItemView {
   private filterType = "all";
   private nodeSizeMode: NodeSizeMode = "links";
   private showAllBtn: HTMLElement | null = null;
+  private miniMap: MiniMap | null = null;
 
   constructor(leaf: WorkspaceLeaf, private plugin: KnowledgeHeatMapPlugin) {
     super(leaf);
@@ -149,6 +151,10 @@ export class HeatMapView extends ItemView {
     this.statsPanel = new StatsPanel(statsContainer, this.plugin.settings.customColors);
     this.legend = new HeatLegend(legendContainer, this.plugin.settings.customColors);
 
+    // E3: Create MiniMap and wire to D3Renderer
+    this.miniMap = new MiniMap(this.graphContainerEl);
+    this.d3Renderer.setMiniMap(this.miniMap);
+
     await this.refresh();
 
     this.resizeObserver = new ResizeObserver(() => {
@@ -164,6 +170,10 @@ export class HeatMapView extends ItemView {
     if (this.resizeObserver) {
       this.resizeObserver.disconnect();
       this.resizeObserver = null;
+    }
+    if (this.miniMap) {
+      this.miniMap.destroy();
+      this.miniMap = null;
     }
     if (this.d3Renderer) {
       this.d3Renderer.destroy();

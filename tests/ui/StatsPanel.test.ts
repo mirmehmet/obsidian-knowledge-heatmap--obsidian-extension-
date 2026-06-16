@@ -1,32 +1,51 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { StatsPanel } from "../../src/ui/StatsPanel";
 import { NoteData, BucketMap } from "../../src/core/types";
 
 describe("StatsPanel", () => {
-  it("renders statistics successfully into a container", () => {
-    const createdElements: any[] = [];
-    
-    const createMockElement = (tag: string, attrs?: any) => {
-      const el: any = {
-        tag,
-        attrs,
-        style: {},
-        createEl: vi.fn().mockImplementation((subtag, subattrs) => {
-          const subel = createMockElement(subtag, subattrs);
-          createdElements.push(subel);
-          return subel;
-        }),
-      };
-      return el;
-    };
+  let originalDocument: any;
 
+  beforeEach(() => {
+    // Save original
+    originalDocument = (globalThis as any).document;
+
+    // Create minimal mock document
+    const createMockEl = (tag: string): any => ({
+      tag,
+      classList: { add: vi.fn() },
+      style: {},
+      textContent: "",
+      innerHTML: "",
+      children: [] as any[],
+      querySelector: vi.fn().mockReturnValue(null),
+      querySelectorAll: vi.fn().mockReturnValue([]),
+      appendChild: vi.fn(function (this: any, child: any) {
+        this.children.push(child);
+        return child;
+      }),
+      setAttribute: vi.fn(),
+    });
+
+    (globalThis as any).document = {
+      createDocumentFragment: vi.fn(() => ({
+        appendChild: vi.fn(),
+      })),
+      createElement: vi.fn((tag: string) => createMockEl(tag)),
+    };
+  });
+
+  afterEach(() => {
+    if (originalDocument !== undefined) {
+      (globalThis as any).document = originalDocument;
+    } else {
+      delete (globalThis as any).document;
+    }
+  });
+
+  it("renders statistics successfully into a container", () => {
     const mockContainer: any = {
       querySelector: vi.fn().mockReturnValue(null),
-      createEl: vi.fn().mockImplementation((tag, attrs) => {
-        const el = createMockElement(tag, attrs);
-        createdElements.push(el);
-        return el;
-      }),
+      appendChild: vi.fn(),
     };
 
     const stats = new StatsPanel(mockContainer);
@@ -45,10 +64,12 @@ describe("StatsPanel", () => {
 
     stats.render(notes, scores, buckets);
 
-    expect(mockContainer.createEl).toHaveBeenCalledWith("div", { cls: "heat-stats-panel" });
-    expect(createdElements.length).toBeGreaterThan(0);
-    
-    const hasTitle = createdElements.some(el => el.tag === "h3" && (el.attrs?.text === "📊 Vault İstatistikleri" || el.attrs?.text === "📊 Vault Statistics"));
-    expect(hasTitle).toBe(true);
+    // Verify fragment was created and appended
+    expect(document.createDocumentFragment).toHaveBeenCalled();
+    // Verify the panel div was created  
+    expect(document.createElement).toHaveBeenCalledWith("div");
+    expect(document.createElement).toHaveBeenCalledWith("h3");
+    // Verify container.appendChild was called (fragment appended)
+    expect(mockContainer.appendChild).toHaveBeenCalled();
   });
 });

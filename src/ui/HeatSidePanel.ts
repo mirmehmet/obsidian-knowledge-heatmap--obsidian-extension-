@@ -1,6 +1,7 @@
-import { App, ButtonComponent, ExtraButtonComponent, SliderComponent, ToggleComponent } from "obsidian";
+import { App, ButtonComponent, ExtraButtonComponent, SliderComponent, ToggleComponent, Notice } from "obsidian";
 import { Weights } from "../core/types";
 import { getStrings } from "../utils/strings";
+import { CustomPreset } from "../store/PluginSettings";
 
 export class HeatSidePanel {
   private panelEl: HTMLElement | null = null;
@@ -15,6 +16,7 @@ export class HeatSidePanel {
       weights: Weights;
       timeRange: string;
       activeCriteria: Record<string, boolean>;
+      customPresets?: CustomPreset[];
     },
     private callbacks: {
       onToggle: (enabled: boolean) => void;
@@ -141,6 +143,73 @@ export class HeatSidePanel {
       .setTooltip(t.panelPresetNetworkTooltip)
       .onClick(() => {
         this.applyPreset({ recency: 10, linkDensity: 50, visitFreq: 10, orphan: 30, contentLen: 0 });
+      });
+
+    // Custom Presets
+    const presets = this.settings.customPresets || [];
+    if (presets.length > 0) {
+      dynamicSection.createEl("h4", { text: t.panelCustomPresetsHeader });
+      const customPresetsDiv = dynamicSection.createEl("div", { cls: "heat-custom-presets-row" });
+      customPresetsDiv.style.display = "flex";
+      customPresetsDiv.style.flexWrap = "wrap";
+      customPresetsDiv.style.gap = "8px";
+      customPresetsDiv.style.marginBottom = "12px";
+
+      presets.forEach((preset, index) => {
+        const itemWrapper = customPresetsDiv.createEl("div", { cls: "heat-custom-preset-item" });
+        itemWrapper.style.display = "inline-flex";
+        itemWrapper.style.alignItems = "center";
+        itemWrapper.style.gap = "2px";
+        itemWrapper.style.border = "1px solid var(--border-color)";
+        itemWrapper.style.borderRadius = "4px";
+        itemWrapper.style.padding = "2px 6px";
+        itemWrapper.style.backgroundColor = "var(--background-secondary)";
+
+        const btn = new ButtonComponent(itemWrapper)
+          .setButtonText(preset.name)
+          .onClick(() => {
+            this.applyCustomPreset(preset);
+          });
+        btn.buttonEl.style.border = "none";
+        btn.buttonEl.style.background = "none";
+        btn.buttonEl.style.padding = "0 4px";
+        btn.buttonEl.style.boxShadow = "none";
+
+        new ExtraButtonComponent(itemWrapper)
+          .setIcon("trash")
+          .setTooltip(t.presetDeleteTooltip)
+          .onClick(() => {
+            this.deletePreset(index);
+          });
+      });
+    }
+
+    // Save as Preset form
+    const savePresetSection = dynamicSection.createEl("div", { cls: "heat-save-preset-section" });
+    savePresetSection.style.display = "flex";
+    savePresetSection.style.gap = "8px";
+    savePresetSection.style.marginTop = "12px";
+    savePresetSection.style.marginBottom = "16px";
+
+    const nameInput = savePresetSection.createEl("input", {
+      type: "text",
+      placeholder: t.panelSavePresetPlaceholder,
+      cls: "heat-preset-name-input"
+    }) as HTMLInputElement;
+    nameInput.style.flex = "1";
+    nameInput.style.padding = "4px 8px";
+    nameInput.style.borderRadius = "4px";
+    nameInput.style.border = "1px solid var(--border-color)";
+
+    new ButtonComponent(savePresetSection)
+      .setButtonText(t.panelSavePresetButton)
+      .onClick(() => {
+        const name = nameInput.value.trim();
+        if (!name) {
+          new Notice(t.presetNameEmptyNotice);
+          return;
+        }
+        this.saveCurrentAsPreset(name);
       });
 
     dynamicSection.createEl("h4", { text: t.panelCriteriaHeader });
@@ -276,6 +345,50 @@ export class HeatSidePanel {
 
     this.callbacks.onSettingsChange();
     
+    if (this.panelEl) {
+      const content = this.panelEl.querySelector(".heat-panel-content") as HTMLElement;
+      if (content) this.renderContent(content);
+    }
+  }
+
+  private applyCustomPreset(preset: CustomPreset): void {
+    Object.assign(this.settings.weights, preset.weights);
+    Object.assign(this.settings.activeCriteria, preset.activeCriteria);
+    this.settings.timeRange = preset.timeRange;
+    this.callbacks.onSettingsChange();
+    if (this.panelEl) {
+      const content = this.panelEl.querySelector(".heat-panel-content") as HTMLElement;
+      if (content) this.renderContent(content);
+    }
+  }
+
+  private deletePreset(index: number): void {
+    const t = getStrings();
+    if (this.settings.customPresets) {
+      this.settings.customPresets.splice(index, 1);
+      this.callbacks.onSettingsChange();
+      new Notice(t.presetDeletedNotice);
+      if (this.panelEl) {
+        const content = this.panelEl.querySelector(".heat-panel-content") as HTMLElement;
+        if (content) this.renderContent(content);
+      }
+    }
+  }
+
+  private saveCurrentAsPreset(name: string): void {
+    const t = getStrings();
+    if (!this.settings.customPresets) {
+      this.settings.customPresets = [];
+    }
+    const newPreset: CustomPreset = {
+      name,
+      weights: JSON.parse(JSON.stringify(this.settings.weights)),
+      activeCriteria: JSON.parse(JSON.stringify(this.settings.activeCriteria)),
+      timeRange: this.settings.timeRange
+    };
+    this.settings.customPresets.push(newPreset);
+    this.callbacks.onSettingsChange();
+    new Notice(t.presetSavedNotice);
     if (this.panelEl) {
       const content = this.panelEl.querySelector(".heat-panel-content") as HTMLElement;
       if (content) this.renderContent(content);

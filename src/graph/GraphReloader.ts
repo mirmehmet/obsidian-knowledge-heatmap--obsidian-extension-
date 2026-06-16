@@ -1,5 +1,6 @@
 import { App, Notice } from "obsidian";
 import { Logger } from "../utils/logger";
+import { getStrings } from "../utils/strings";
 
 /**
  * Handles hot-reloading and syncing graph configurations into active Obsidian Graph View panels.
@@ -18,7 +19,8 @@ export class GraphReloader {
     const leaves = app.workspace.getLeavesOfType("graph");
     if (leaves.length === 0) {
       if (showNotifications) {
-        new Notice("🔥 Knowledge Heat Map: Lütfen önce Graph View (İlişki Grafiği) görünümünü açın!");
+        const t = getStrings();
+        new Notice(t.graphViewNotOpen);
       }
       return false;
     }

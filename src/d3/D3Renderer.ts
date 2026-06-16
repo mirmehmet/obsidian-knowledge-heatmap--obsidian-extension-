@@ -2,6 +2,7 @@ import * as d3 from "d3";
 import { HeatNode, HeatLink } from "./D3Types";
 import { GlowFilter } from "./GlowFilter";
 import { NodeTooltip } from "./NodeTooltip";
+import { MiniMap } from "./MiniMap";
 import { ColorMapper } from "../core/ColorMapper";
 import { NoteData, BucketName } from "../core/types";
 
@@ -12,20 +13,21 @@ export class D3Renderer {
   private g: d3.Selection<SVGGElement, unknown, null, undefined>;
   private simulation: d3.Simulation<HeatNode, HeatLink>;
   private tooltip: NodeTooltip;
-  private nodeSelection: d3.Selection<any, HeatNode, any, any>;
-  private linkSelection: d3.Selection<any, HeatLink, any, any>;
+  private nodeSelection: d3.Selection<SVGGElement, HeatNode, SVGGElement, unknown>;
+  private linkSelection: d3.Selection<SVGLineElement, HeatLink, SVGGElement, unknown>;
   private activeSearchQuery = "";
   private focusedNodeId: string | null = null;
   private allNodes: HeatNode[] = [];
   private allLinks: HeatLink[] = [];
   private currentNodeSizeMode: NodeSizeMode = "links";
   private onFocusModeChange: ((active: boolean) => void) | null = null;
+  private miniMap: MiniMap | null = null;
 
   constructor(
     private container: HTMLElement,
     private onNodeClick: (path: string) => void
   ) {
-    this.tooltip = new NodeTooltip(this.container);
+    this.tooltip = new NodeTooltip(this.container, this.onNodeClick);
     this.initSvg();
   }
 
@@ -52,6 +54,15 @@ export class D3Renderer {
       });
 
     this.svg.call(zoom);
+
+    // F1: Escape key to exit focus mode
+    this.svg.on("keydown", (event: KeyboardEvent) => {
+      if (event.key === "Escape" && this.isFocusModeActive()) {
+        this.exitFocusMode();
+      }
+    });
+    // Make SVG focusable for keyboard events
+    this.svg.attr("tabindex", "0").style("outline", "none");
   }
 
   public render(
@@ -211,6 +222,19 @@ export class D3Renderer {
       .style("pointer-events", "none")
       .text((d) => d.name);
 
+    // E2: Staggered entrance animation
+    node
+      .style("opacity", 0)
+      .transition()
+      .delay((d) => {
+        const bucketOrder = ["burning", "hot", "warm", "cold", "frozen"];
+        const bucket = ColorMapper.getBucketName(d.score);
+        const idx = bucketOrder.indexOf(bucket);
+        return idx * 80;
+      })
+      .duration(400)
+      .style("opacity", 1);
+
     this.simulation = d3
       .forceSimulation<HeatNode>(nodes)
       .force(
@@ -232,6 +256,19 @@ export class D3Renderer {
         .attr("y2", (d) => (d.target as HeatNode).y!);
 
       node.attr("transform", (d) => `translate(${d.x!}, ${d.y!})`);
+
+      // E3: Update MiniMap on each tick
+      if (this.miniMap && nodes.length > 0) {
+        const miniNodes = nodes.map(n => ({ x: n.x ?? 0, y: n.y ?? 0, color: n.color }));
+        const rect = this.container.getBoundingClientRect();
+        const transform = d3.zoomTransform(this.svg.node()!);
+        this.miniMap.update(miniNodes, {
+          x: -transform.x / transform.k,
+          y: -transform.y / transform.k,
+          width: rect.width / transform.k,
+          height: rect.height / transform.k,
+        });
+      }
     });
 
     if (this.activeSearchQuery) {
@@ -430,5 +467,15 @@ export class D3Renderer {
       .call(d3.zoom<SVGSVGElement, unknown>().transform as any, transform);
 
     this.enterFocusMode(path);
+  }
+
+  // E3: MiniMap setter
+  public setMiniMap(miniMap: MiniMap): void {
+    this.miniMap = miniMap;
+  }
+
+  // E3: Public accessor for current nodes
+  public getNodes(): HeatNode[] {
+    return this.allNodes;
   }
 }

@@ -1,4 +1,12 @@
 import { Weights } from "../core/types";
+import type { HeatSnapshot } from "./HistoryManager";
+
+export interface CustomPreset {
+  name: string;
+  weights: Weights;
+  activeCriteria: Record<string, boolean>;
+  timeRange: string;
+}
 
 export interface KnowledgeHeatMapSettings {
   enabled: boolean;
@@ -34,7 +42,13 @@ export interface KnowledgeHeatMapSettings {
   // C6: Time Travel
   enableHistory: boolean;
   maxSnapshots: number;
-  heatSnapshots: import("./HistoryManager").HeatSnapshot[];
+  heatSnapshots: HeatSnapshot[];
+
+  // F4: Custom presets
+  customPresets: CustomPreset[];
+
+  // F5: What's New modal
+  lastSeenVersion: string;
 }
 
 export const DEFAULT_SETTINGS: KnowledgeHeatMapSettings = {
@@ -84,4 +98,10 @@ export const DEFAULT_SETTINGS: KnowledgeHeatMapSettings = {
   enableHistory: true,
   maxSnapshots: 90,
   heatSnapshots: [],
+
+  // F4: Custom presets
+  customPresets: [],
+
+  // F5: What's New modal
+  lastSeenVersion: "",
 };

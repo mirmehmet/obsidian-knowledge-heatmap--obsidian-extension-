@@ -16,6 +16,7 @@ import { DigestService } from "./store/DigestService";
 import { HistoryManager } from "./store/HistoryManager";
 import { getStrings } from "./utils/strings";
 import { Logger } from "./utils/logger";
+import { WhatsNewModal } from "./ui/WhatsNewModal";
 
 export default class KnowledgeHeatMapPlugin extends Plugin {
   public settings: KnowledgeHeatMapSettings;
@@ -27,8 +28,8 @@ export default class KnowledgeHeatMapPlugin extends Plugin {
   private sidePanel: HeatSidePanel | null = null;
   private statusBarEl: HTMLElement | null = null;
   private isApplying = false;
-  private debounceTimeout: any = null;
-  private refreshIntervalId: any = null;
+  private debounceTimeout: ReturnType<typeof setTimeout> | null = null;
+  private refreshIntervalId: ReturnType<typeof setInterval> | null = null;
 
   async onload() {
     const t = getStrings();
@@ -65,10 +66,7 @@ export default class KnowledgeHeatMapPlugin extends Plugin {
       this.app.vault.on("modify", (file) => {
         if (file instanceof TFile && file.extension === "md") {
           this.cache.invalidate(file.path);
-          if (this.settings.enabled) {
-            this.debouncedApply();
-          }
-          this.refreshD3View();
+          this.debouncedApplyAndRefresh();
         }
       })
     );
@@ -77,10 +75,9 @@ export default class KnowledgeHeatMapPlugin extends Plugin {
       this.app.vault.on("delete", (file) => {
         if (file instanceof TFile) {
           this.cache.invalidate(file.path);
-          if (this.settings.enabled) {
-            this.debouncedApply();
-          }
-          this.refreshD3View();
+          // D7: Clean up history for deleted files
+          delete this.settings.scoreHistory[file.path];
+          this.debouncedApplyAndRefresh();
         }
       })
     );
@@ -90,10 +87,12 @@ export default class KnowledgeHeatMapPlugin extends Plugin {
         if (file instanceof TFile) {
           this.cache.invalidate(oldPath);
           this.cache.invalidate(file.path);
-          if (this.settings.enabled) {
-            this.debouncedApply();
+          // D7: Migrate history on rename
+          if (this.settings.scoreHistory[oldPath]) {
+            this.settings.scoreHistory[file.path] = this.settings.scoreHistory[oldPath];
+            delete this.settings.scoreHistory[oldPath];
           }
-          this.refreshD3View();
+          this.debouncedApplyAndRefresh();
         }
       })
     );
@@ -157,7 +156,7 @@ export default class KnowledgeHeatMapPlugin extends Plugin {
         if (file instanceof TFile && file.extension === "md") {
           menu.addItem((item) => {
             item
-              .setTitle("🌡 Show Heat Score")
+              .setTitle(t.contextMenuShowScore)
               .setIcon("thermometer")
               .onClick(async () => {
                 const score = await this.getScoreForFile(file);
@@ -165,24 +164,24 @@ export default class KnowledgeHeatMapPlugin extends Plugin {
                   const bucket = ColorMapper.getBucketName(score);
                   new Notice(`🌡 ${file.basename}: ${score.toFixed(2)} (${bucket.toUpperCase()})`, 5000);
                 } else {
-                  new Notice(`⚠️ ${file.basename}: Score not available`, 3000);
+                  new Notice(`⚠️ ${file.basename}: ${t.scoreNotAvailable}`, 3000);
                 }
               });
           });
           menu.addItem((item) => {
             item
-              .setTitle("🔥 Show in Heat View")
+              .setTitle(t.contextMenuShowInView)
               .setIcon("fire")
               .onClick(async () => {
                 await this.activateView();
-                // Wait for the view to initialize, then focus on the node
+                // D5: Type-safe view access
                 setTimeout(() => {
                   const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_KNOWLEDGE_HEAT_MAP);
-                  leaves.forEach((leaf) => {
+                  for (const leaf of leaves) {
                     if (leaf.view instanceof HeatMapView) {
-                      (leaf.view as any).focusOnFile?.(file.path);
+                      leaf.view.focusOnFile(file.path);
                     }
-                  });
+                  }
                 }, 500);
               });
           });
@@ -207,6 +206,14 @@ export default class KnowledgeHeatMapPlugin extends Plugin {
 
       // C4: Weekly Digest check
       DigestService.checkAndShow(this.settings, () => this.saveSettings());
+
+      // F5: "What's New" modal check
+      const currentVersion = this.manifest.version;
+      if (this.settings.lastSeenVersion !== currentVersion) {
+        new WhatsNewModal(this.app).open();
+        this.settings.lastSeenVersion = currentVersion;
+        await this.saveSettings();
+      }
     });
   }
 
@@ -264,6 +271,18 @@ export default class KnowledgeHeatMapPlugin extends Plugin {
       if (this.settings.enabled) {
         this.applyHeatMap();
       }
+    }, 500);
+  }
+
+  // D8: Combined debounce for both graph apply and D3 view refresh
+  private debouncedApplyAndRefresh(): void {
+    if (this.debounceTimeout) clearTimeout(this.debounceTimeout);
+    this.debounceTimeout = setTimeout(() => {
+      this.debounceTimeout = null;
+      if (this.settings.enabled) {
+        this.applyHeatMap();
+      }
+      this.refreshD3View();
     }, 500);
   }
 
@@ -508,10 +527,11 @@ export default class KnowledgeHeatMapPlugin extends Plugin {
     }
   }
 
-  // B5: Save current scores to history for trend tracking
+  // B5+D7: Save current scores to history for trend tracking (capped)
   private async saveScoreHistory(scores: Record<string, number>): Promise<void> {
     const now = Date.now();
-    const MAX_HISTORY = 30;
+    const MAX_HISTORY_PER_NOTE = 30;
+    const MAX_TRACKED_NOTES = 500;
 
     for (const [path, score] of Object.entries(scores)) {
       if (!this.settings.scoreHistory[path]) {
@@ -520,10 +540,25 @@ export default class KnowledgeHeatMapPlugin extends Plugin {
       this.settings.scoreHistory[path].push({ score, timestamp: now });
 
       // Cap history per note
-      if (this.settings.scoreHistory[path].length > MAX_HISTORY) {
-        this.settings.scoreHistory[path] = this.settings.scoreHistory[path].slice(-MAX_HISTORY);
+      if (this.settings.scoreHistory[path].length > MAX_HISTORY_PER_NOTE) {
+        this.settings.scoreHistory[path] = this.settings.scoreHistory[path].slice(-MAX_HISTORY_PER_NOTE);
       }
     }
+
+    // D7: Cap total tracked notes — prune least recently updated
+    const historyKeys = Object.keys(this.settings.scoreHistory);
+    if (historyKeys.length > MAX_TRACKED_NOTES) {
+      const sorted = historyKeys
+        .map(k => ({ key: k, lastTs: this.settings.scoreHistory[k].at(-1)?.timestamp ?? 0 }))
+        .sort((a, b) => b.lastTs - a.lastTs);
+      const toKeep = new Set(sorted.slice(0, MAX_TRACKED_NOTES).map(e => e.key));
+      for (const key of historyKeys) {
+        if (!toKeep.has(key)) {
+          delete this.settings.scoreHistory[key];
+        }
+      }
+    }
+
     await this.saveSettings();
   }
 

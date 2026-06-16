@@ -5,7 +5,7 @@ import { getStrings } from "../utils/strings";
 export class NodeTooltip {
   private tooltipEl: HTMLElement;
 
-  constructor(private container: HTMLElement) {
+  constructor(private container: HTMLElement, private onTitleClick?: (path: string) => void) {
     const existing = this.container.querySelector(".heat-node-tooltip");
     if (existing) {
       this.tooltipEl = existing as HTMLElement;
@@ -16,6 +16,16 @@ export class NodeTooltip {
       this.tooltipEl.style.zIndex = "1010";
       this.tooltipEl.style.pointerEvents = "none";
     }
+
+    this.tooltipEl.addEventListener("click", (e) => {
+      const titleEl = (e.target as HTMLElement).closest(".tooltip-title");
+      if (titleEl) {
+        const path = titleEl.getAttribute("data-path");
+        if (path && this.onTitleClick) {
+          this.onTitleClick(path);
+        }
+      }
+    });
   }
 
   public show(event: MouseEvent, node: HeatNode): void {
@@ -31,7 +41,7 @@ export class NodeTooltip {
       : "var(--text-muted)";
 
     const content = `
-      <div class="tooltip-title">${node.name}</div>
+      <div class="tooltip-title" data-path="${node.id}" style="cursor:pointer;text-decoration:underline dotted;"><a>${node.name}</a></div>
       <div class="tooltip-divider"></div>
       <div class="tooltip-row">
         <span>🌡 Heat Score:</span>
@@ -62,6 +72,8 @@ export class NodeTooltip {
 
     this.tooltipEl.innerHTML = content;
     this.tooltipEl.style.display = "block";
+    // F3: Enable pointer events for clickable title
+    this.tooltipEl.style.pointerEvents = "auto";
 
     this.updatePosition(event);
   }

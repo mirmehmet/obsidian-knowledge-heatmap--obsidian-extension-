@@ -2,7 +2,7 @@ import { App, TFile, Plugin } from "obsidian";
 import { Logger } from "../utils/logger";
 
 export class VisitTracker {
-  private saveTimeout: any = null;
+  private saveTimeout: ReturnType<typeof setTimeout> | null = null;
   private visits: Record<string, number> = {};
 
   constructor(private app: App, private plugin: Plugin) {}

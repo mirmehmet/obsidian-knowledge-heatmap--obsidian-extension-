@@ -138,6 +138,40 @@ export const STRINGS = {
     d3FolderFilterLabel: "Klasör Filtresi:",
     d3FolderFilterAll: "Tüm Klasörler",
     d3ScoreRangeLabel: "Skor Aralığı:",
+
+    // D2: GraphReloader
+    graphViewNotOpen: "🔥 Lütfen önce Graph View (İlişki Grafiği) görünümünü açın!",
+    hexInvalid: "Geçersiz hex renk kodu",
+
+    // F4: Custom Presets
+    panelCustomPresetsHeader: "Özel Profilleriniz",
+    panelSavePresetButton: "Profili Kaydet",
+    panelSavePresetPlaceholder: "Profil Adı...",
+    presetDeleteTooltip: "Bu profili sil",
+    presetSavedNotice: "Profil başarıyla kaydedildi!",
+    presetDeletedNotice: "Profil silindi.",
+    presetNameEmptyNotice: "Lütfen bir profil adı girin!",
+
+    // F5: What's New
+    whatsNewTitle: "🔥 Knowledge Heat Map v2.0.0 — Yenilikler!",
+    whatsNewIntro: "Knowledge Heat Map'in yeni sürümü yayında! İşte eklenen harika özellikler:",
+    whatsNewClose: "Harika, Başlayalım!",
+    whatsNewFeature1Title: "🗺️ Canlı Mini Harita (MiniMap)",
+    whatsNewFeature1Desc: "Büyük grafiklerde yönünüzü kaybetmeyin. Sağ alttaki interaktif harita ile konumunuzu takip edin.",
+    whatsNewFeature2Title: "⏳ Zaman Yolculuğu & Snapshot",
+    whatsNewFeature2Desc: "Isı haritasının geçmiş sürümlerini kaydedin, karşılaştırın ve zaman içindeki değişimi izleyin.",
+    whatsNewFeature3Title: "📊 Haftalık Özet (Weekly Digest)",
+    whatsNewFeature3Desc: "Haftalık olarak hangi notların ısındığını, hangilerinin soğuduğunu belirten akıllı özet bildirimler.",
+    whatsNewFeature4Title: "🔗 Tıklanabilir İpuçları (Tooltip Link)",
+    whatsNewFeature4Desc: "İlişki grafiğindeki baloncukta yer alan başlığa tıklayarak ilgili notu doğrudan açın.",
+    whatsNewFeature5Title: "💾 Özel Profil Desteği (Custom Presets)",
+    whatsNewFeature5Desc: "Kendi kriter ve ağırlık kombinasyonlarınızı profil olarak kaydedin, tek tıkla uygulayın.",
+    whatsNewFeature6Title: "🎯 Odak Modu (Ego-Graph)",
+    whatsNewFeature6Desc: "Bir not üzerine sağ tıklayarak sadece o notu ve komşularını görüntüleyin.",
+    whatsNewFeature7Title: "🎨 Canlı Renk Paletleri",
+    whatsNewFeature7Desc: "6 hazır canlı paletten birini seçin ya da kendi özel renk spektrumunuzu oluşturun.",
+    whatsNewFeature8Title: "⚡ Üstün Performans",
+    whatsNewFeature8Desc: "Yeni DOM güncellemeleri, animasyonlu sayaçlar ve akıllı delta analiz motoru ile sıfır gecikme.",
   },
   en: {
     pluginLoading: "Loading Knowledge Heat Map plugin...",
@@ -278,6 +312,39 @@ export const STRINGS = {
     d3FolderFilterLabel: "Folder Filter:",
     d3FolderFilterAll: "All Folders",
     d3ScoreRangeLabel: "Score Range:",
+
+    // D2: GraphReloader
+    graphViewNotOpen: "🔥 Please open a Graph View first!",
+    hexInvalid: "Invalid hex color code",
+
+    panelCustomPresetsHeader: "Custom Presets",
+    panelSavePresetButton: "Save Preset",
+    panelSavePresetPlaceholder: "Preset Name...",
+    presetDeleteTooltip: "Delete this preset",
+    presetSavedNotice: "Preset saved successfully!",
+    presetDeletedNotice: "Preset deleted.",
+    presetNameEmptyNotice: "Please enter a preset name!",
+
+    // F5: What's New
+    whatsNewTitle: "🔥 Knowledge Heat Map v2.0.0 — What's New!",
+    whatsNewIntro: "A major update to Knowledge Heat Map is here! Check out the amazing new features:",
+    whatsNewClose: "Awesome, let's start!",
+    whatsNewFeature1Title: "🗺️ Interactive MiniMap",
+    whatsNewFeature1Desc: "Never get lost in massive node networks. Track and navigate your viewport using the new mini-map.",
+    whatsNewFeature2Title: "⏳ Time Travel Snapshots",
+    whatsNewFeature2Desc: "Take snapshots of your heat map scores, keep history logs, and travel back in time.",
+    whatsNewFeature3Title: "📊 Weekly Digests",
+    whatsNewFeature3Desc: "Receive automated weekly summaries highlighting shifts in your note heat patterns.",
+    whatsNewFeature4Title: "🔗 Clickable Tooltip Links",
+    whatsNewFeature4Desc: "Click on any note title inside the node tooltip to open that file instantly.",
+    whatsNewFeature5Title: "💾 Custom Presets",
+    whatsNewFeature5Desc: "Configure your own weight distributions and save them as presets for easy switching.",
+    whatsNewFeature6Title: "🎯 Ego-Graph Focus Mode",
+    whatsNewFeature6Desc: "Right-click a node to isolate it and focus only on its first and second-degree neighbors.",
+    whatsNewFeature7Title: "🎨 Vibrant Color Palettes",
+    whatsNewFeature7Desc: "Choose from 6 professionally designed color themes or create your own custom spectrum.",
+    whatsNewFeature8Title: "⚡ Performance Upgrades",
+    whatsNewFeature8Desc: "DocumentFragment rendering, incremental analysis, and animated counters ensure lag-free use.",
   }
 };
 
