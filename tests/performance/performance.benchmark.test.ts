@@ -54,7 +54,7 @@ describe("Performance Benchmark", () => {
 
     const scores: Record<string, number> = {};
     notesData.forEach(note => {
-      scores[note.path] = ScoreCalculator.calculate(note, weights);
+      scores[note.path] = ScoreCalculator.calculate(note, weights, undefined, "all");
     });
 
     const buckets = BucketSorter.sort(scores);

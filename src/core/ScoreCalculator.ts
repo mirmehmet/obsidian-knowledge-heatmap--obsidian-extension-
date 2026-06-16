@@ -15,7 +15,8 @@ export class ScoreCalculator {
   public static calculate(
     note: NoteData,
     weights: Weights,
-    activeCriteria?: Record<string, boolean>
+    activeCriteria?: Record<string, boolean>,
+    timeRange?: string
   ): HeatScore {
     const totalLinks = note.inlinks + note.outlinks;
 
@@ -24,8 +25,13 @@ export class ScoreCalculator {
       return activeCriteria[key] ?? true;
     };
 
+    let decayDenominator = 30;
+    if (timeRange === "7d") decayDenominator = 7;
+    else if (timeRange === "30d") decayDenominator = 30;
+    else if (timeRange === "90d") decayDenominator = 90;
+
     const raw = {
-      recency: Math.exp(-note.daysSinceModified / 30),
+      recency: Math.exp(-note.daysSinceModified / decayDenominator),
       linkDensity: Math.min(totalLinks, 50) / 50,
       visitFreq: Math.min(note.visitCount, 100) / 100,
       orphan: totalLinks === 0 ? 0 : 1,

@@ -141,7 +141,7 @@ export class HeatMapView extends ItemView {
       filteredNotes.forEach(note => {
         let score = this.plugin.cache.get(note.path);
         if (score === null) {
-          score = ScoreCalculator.calculate(note, this.plugin.settings.weights, this.plugin.settings.activeCriteria);
+          score = ScoreCalculator.calculate(note, this.plugin.settings.weights, this.plugin.settings.activeCriteria, this.plugin.settings.timeRange);
           this.plugin.cache.set(note.path, score);
         }
         scores[note.path] = score;

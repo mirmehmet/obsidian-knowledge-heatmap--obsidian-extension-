@@ -266,7 +266,7 @@ export default class KnowledgeHeatMapPlugin extends Plugin {
       filteredNotes.forEach(note => {
         let score = this.cache.get(note.path);
         if (score === null) {
-          score = ScoreCalculator.calculate(note, this.settings.weights, this.settings.activeCriteria);
+          score = ScoreCalculator.calculate(note, this.settings.weights, this.settings.activeCriteria, this.settings.timeRange);
           this.cache.set(note.path, score);
         }
         scores[note.path] = score;

@@ -144,4 +144,40 @@ describe("ScoreCalculator", () => {
       )
     ).toBeCloseTo(0.0, 5);
   });
+
+  it("calculates recency differently based on timeRange parameter", () => {
+    const freshNote: NoteData = {
+      path: "fresh.md",
+      name: "fresh",
+      daysSinceModified: 7, // 7 days old
+      charCount: 0,
+      outlinks: 0,
+      inlinks: 0,
+      visitCount: 0,
+      tags: [],
+      frontmatter: {},
+    };
+
+    const weights: Weights = {
+      recency: 100,
+      linkDensity: 0,
+      visitFreq: 0,
+      orphan: 0,
+      contentLen: 0,
+    };
+
+    // For 7d: e^(-7/7) = e^(-1) ~ 0.36787
+    const score7d = ScoreCalculator.calculate(freshNote, weights, undefined, "7d");
+    // For 90d: e^(-7/90) ~ 0.925
+    const score90d = ScoreCalculator.calculate(freshNote, weights, undefined, "90d");
+    // For 30d: e^(-7/30) ~ 0.792
+    const score30d = ScoreCalculator.calculate(freshNote, weights, undefined, "30d");
+    // Default (all): e^(-7/30) ~ 0.792
+    const scoreDefault = ScoreCalculator.calculate(freshNote, weights, undefined);
+
+    expect(score7d).toBeCloseTo(Math.exp(-1), 5);
+    expect(score90d).toBeCloseTo(Math.exp(-7 / 90), 5);
+    expect(score30d).toBeCloseTo(Math.exp(-7 / 30), 5);
+    expect(scoreDefault).toBeCloseTo(score30d, 5);
+  });
 });

@@ -17,7 +17,6 @@ export interface KnowledgeHeatMapSettings {
     hot: string;
     burning: string;
   };
-  bucketCount: number; 
 
   cacheTimeoutMinutes: number; 
   excludeFolders: string[];
@@ -55,7 +54,6 @@ export const DEFAULT_SETTINGS: KnowledgeHeatMapSettings = {
     hot: "#f59e0b",
     burning: "#ef4444",
   },
-  bucketCount: 5,
 
   cacheTimeoutMinutes: 30,
   excludeFolders: [],
