@@ -1,9 +1,0 @@
-{
-  "id": "knowledge-heatmap",
-  "name": "Knowledge Heat Map",
-  "version": "1.0.0",
-  "minAppVersion": "1.4.0",
-  "description": "Visualizes your vault's activity and connectivity as a heat map in Graph View.",
-  "author": "Mir",
-  "isDesktopOnly": false
-}

@@ -46,7 +46,7 @@ export default class KnowledgeHeatMapPlugin extends Plugin {
       this.activateView();
     });
 
-    this.controlButton = new HeatControlButton(this.app, this, (leaf) => this.togglePanel(leaf));
+    this.controlButton = new HeatControlButton(this.app, (leaf) => this.togglePanel(leaf));
 
     this.registerEvent(
       this.app.workspace.on("layout-change", () => {

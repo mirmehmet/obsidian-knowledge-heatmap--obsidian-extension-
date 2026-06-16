@@ -1,11 +1,10 @@
-import { App, Plugin, WorkspaceLeaf } from "obsidian";
+import { App, WorkspaceLeaf } from "obsidian";
 
 export class HeatControlButton {
   private buttons: Map<string, HTMLElement> = new Map();
 
   constructor(
     private app: App,
-    private plugin: Plugin,
     private onToggle: (leaf: WorkspaceLeaf) => void
   ) {}
 
