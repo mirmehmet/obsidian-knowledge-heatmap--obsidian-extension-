@@ -1,4 +1,3 @@
-import * as d3 from "d3";
 
 /**
  * A small overview minimap displayed in the corner of the D3 heat view.

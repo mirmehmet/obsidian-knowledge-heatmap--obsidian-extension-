@@ -153,7 +153,7 @@ export const STRINGS = {
     presetNameEmptyNotice: "Lütfen bir profil adı girin!",
 
     // F5: What's New
-    whatsNewTitle: "🔥 Knowledge Heat Map v2.0.0 — Yenilikler!",
+    whatsNewTitle: "🔥 Knowledge Heat Map v0.2.0 — Yenilikler!",
     whatsNewIntro: "Knowledge Heat Map'in yeni sürümü yayında! İşte eklenen harika özellikler:",
     whatsNewClose: "Harika, Başlayalım!",
     whatsNewFeature1Title: "🗺️ Canlı Mini Harita (MiniMap)",
@@ -326,7 +326,7 @@ export const STRINGS = {
     presetNameEmptyNotice: "Please enter a preset name!",
 
     // F5: What's New
-    whatsNewTitle: "🔥 Knowledge Heat Map v2.0.0 — What's New!",
+    whatsNewTitle: "🔥 Knowledge Heat Map v0.2.0 — What's New!",
     whatsNewIntro: "A major update to Knowledge Heat Map is here! Check out the amazing new features:",
     whatsNewClose: "Awesome, let's start!",
     whatsNewFeature1Title: "🗺️ Interactive MiniMap",

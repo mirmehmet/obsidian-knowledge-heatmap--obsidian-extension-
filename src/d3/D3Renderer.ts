@@ -51,6 +51,7 @@ export class D3Renderer {
       .scaleExtent([0.1, 8])
       .on("zoom", (event) => {
         this.g.attr("transform", event.transform);
+        this.updateMiniMapViewport(event.transform);
       });
 
     this.svg.call(zoom);
@@ -102,6 +103,8 @@ export class D3Renderer {
 
     const nodes = Array.from(nodeMap.values());
     const links: HeatLink[] = [];
+    this.allNodes = nodes;
+    this.allLinks = links;
 
     for (const [sourcePath, targets] of Object.entries(resolvedLinks)) {
       if (!nodeMap.has(sourcePath)) continue;
@@ -258,16 +261,9 @@ export class D3Renderer {
       node.attr("transform", (d) => `translate(${d.x!}, ${d.y!})`);
 
       // E3: Update MiniMap on each tick
-      if (this.miniMap && nodes.length > 0) {
-        const miniNodes = nodes.map(n => ({ x: n.x ?? 0, y: n.y ?? 0, color: n.color }));
-        const rect = this.container.getBoundingClientRect();
+      if (this.svg) {
         const transform = d3.zoomTransform(this.svg.node()!);
-        this.miniMap.update(miniNodes, {
-          x: -transform.x / transform.k,
-          y: -transform.y / transform.k,
-          width: rect.width / transform.k,
-          height: rect.height / transform.k,
-        });
+        this.updateMiniMapViewport(transform);
       }
     });
 
@@ -472,6 +468,44 @@ export class D3Renderer {
   // E3: MiniMap setter
   public setMiniMap(miniMap: MiniMap): void {
     this.miniMap = miniMap;
+    this.miniMap.setOnPan((worldX, worldY) => {
+      if (!this.svg) return;
+      const rect = this.container.getBoundingClientRect();
+      const centerX = rect.width / 2;
+      const centerY = rect.height / 2;
+      const transform = d3.zoomTransform(this.svg.node()!);
+      const newTransform = d3.zoomIdentity
+        .translate(centerX - worldX * transform.k, centerY - worldY * transform.k)
+        .scale(transform.k);
+
+      const zoom = d3.zoom<SVGSVGElement, unknown>().scaleExtent([0.1, 8])
+        .on("zoom", (event) => {
+          this.g.attr("transform", event.transform);
+          this.updateMiniMapViewport(event.transform);
+        });
+
+      this.svg
+        .transition()
+        .duration(500)
+        .call(zoom.transform as any, newTransform);
+    });
+  }
+
+  private updateMiniMapViewport(transform: d3.ZoomTransform): void {
+    if (this.miniMap && this.allNodes.length > 0) {
+      const miniNodes = this.allNodes.map((n) => ({
+        x: n.x ?? 0,
+        y: n.y ?? 0,
+        color: n.color,
+      }));
+      const rect = this.container.getBoundingClientRect();
+      this.miniMap.update(miniNodes, {
+        x: -transform.x / transform.k,
+        y: -transform.y / transform.k,
+        width: rect.width / transform.k,
+        height: rect.height / transform.k,
+      });
+    }
   }
 
   // E3: Public accessor for current nodes

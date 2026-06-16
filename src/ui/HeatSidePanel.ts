@@ -7,6 +7,7 @@ export class HeatSidePanel {
   private panelEl: HTMLElement | null = null;
   private overlayEl: HTMLElement | null = null;
   private isOpen = false;
+  private closeTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     private app: App,
@@ -36,8 +37,19 @@ export class HeatSidePanel {
   }
 
   public open(): void {
+    if (this.closeTimeoutId) {
+      clearTimeout(this.closeTimeoutId);
+      this.closeTimeoutId = null;
+    }
     if (this.isOpen) return;
     this.isOpen = true;
+
+    if (this.panelEl && this.overlayEl) {
+      this.panelEl.classList.add("is-open");
+      this.overlayEl.classList.add("is-open");
+      return;
+    }
+
     this.render();
     
     setTimeout(() => {
@@ -58,7 +70,11 @@ export class HeatSidePanel {
     if (this.panelEl) this.panelEl.classList.remove("is-open");
     if (this.overlayEl) this.overlayEl.classList.remove("is-open");
 
-    setTimeout(() => {
+    if (this.closeTimeoutId) {
+      clearTimeout(this.closeTimeoutId);
+    }
+    this.closeTimeoutId = setTimeout(() => {
+      this.closeTimeoutId = null;
       if (this.panelEl) {
         this.panelEl.remove();
         this.panelEl = null;

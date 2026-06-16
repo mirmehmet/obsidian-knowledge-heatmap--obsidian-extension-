@@ -1,5 +1,6 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
 import { getStrings } from "../utils/strings";
+import { ColorMapper } from "../core/ColorMapper";
 import type KnowledgeHeatMapPlugin from "../main";
 
 export class SettingsTab extends PluginSettingTab {
@@ -226,7 +227,6 @@ export class SettingsTab extends PluginSettingTab {
     const existing = containerEl.querySelector(".heat-palette-preview");
     if (existing) existing.remove();
 
-    const { ColorMapper } = require("../core/ColorMapper");
     const palette = this.plugin.settings.palette === "custom"
       ? this.plugin.settings.customColors
       : ColorMapper.getPaletteColors(this.plugin.settings.palette);

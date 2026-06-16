@@ -1,6 +1,5 @@
 import { App } from "obsidian";
 import { BucketMap, BucketName } from "../core/types";
-import { ColorMapper } from "../core/ColorMapper";
 import { GroupsBuilder } from "./GroupsBuilder";
 import { Logger } from "../utils/logger";
 

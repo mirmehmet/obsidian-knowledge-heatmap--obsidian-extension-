@@ -194,13 +194,23 @@ export default class KnowledgeHeatMapPlugin extends Plugin {
     // A2: Fixed — no longer calls restoreGraphView() when enableOnStartup is false
     this.app.workspace.onLayoutReady(async () => {
       Logger.setDebugMode(this.settings.debugMode);
+      const wasEnabled = this.settings.enabled;
+
       if (this.settings.enableOnStartup) {
         this.settings.enabled = true;
         await this.saveSettings();
         this.controlButton.injectButtons(true);
+        if (wasEnabled) {
+          await this.initializeSanitizedBackup();
+        }
         await this.applyHeatMap();
       } else {
+        this.settings.enabled = false;
+        await this.saveSettings();
         this.controlButton.injectButtons(false);
+        if (wasEnabled) {
+          await this.restoreGraphView();
+        }
       }
       this.updateStatusBar();
 
@@ -574,5 +584,20 @@ export default class KnowledgeHeatMapPlugin extends Plugin {
     if (diff > 0.05) return "up";
     if (diff < -0.05) return "down";
     return "stable";
+  }
+
+  private async initializeSanitizedBackup(): Promise<void> {
+    try {
+      const raw = await this.graphJsonManager.readGraphJson();
+      if (raw && Array.isArray(raw.colorGroups)) {
+        const userGroups = raw.colorGroups.filter((g: any) => {
+          return !g.query || !g.query.includes('path:"');
+        });
+        const cleanConfig = Object.assign({}, raw, { colorGroups: userGroups });
+        this.graphJsonManager.setBackup(JSON.stringify(cleanConfig, null, 2));
+      }
+    } catch (e) {
+      Logger.error("Failed to initialize sanitized backup", e);
+    }
   }
 }

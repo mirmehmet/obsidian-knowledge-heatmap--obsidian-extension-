@@ -1,7 +1,6 @@
 import { Notice } from "obsidian";
 import { KnowledgeHeatMapSettings } from "./PluginSettings";
 import { ColorMapper } from "../core/ColorMapper";
-import { getStrings } from "../utils/strings";
 import { Logger } from "../utils/logger";
 
 /**
@@ -42,7 +41,6 @@ export class DigestService {
    * Generates a digest summary string from score history.
    */
   private static generateDigest(settings: KnowledgeHeatMapSettings): string | null {
-    const t = getStrings();
     const history = settings.scoreHistory;
     if (!history || Object.keys(history).length === 0) return null;
 
@@ -50,7 +48,7 @@ export class DigestService {
     let declined = 0;
     let frozenCount = 0;
 
-    for (const [_path, entries] of Object.entries(history)) {
+    for (const entries of Object.values(history)) {
       if (entries.length < 2) continue;
 
       const latest = entries[entries.length - 1].score;
