@@ -1,4 +1,5 @@
 import { App, TFile, Plugin } from "obsidian";
+import { Logger } from "../utils/logger";
 
 export class VisitTracker {
   private saveTimeout: any = null;
@@ -43,7 +44,7 @@ export class VisitTracker {
         data.visits = this.visits;
         await this.plugin.saveData(data);
       } catch (err) {
-        console.error("KnowledgeHeatMap: Failed to save visits data", err);
+        Logger.error("Failed to save visits data", err);
       }
     }, 100);
   }

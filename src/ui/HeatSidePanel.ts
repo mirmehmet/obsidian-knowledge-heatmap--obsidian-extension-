@@ -21,6 +21,7 @@ export class HeatSidePanel {
       onSettingsChange: () => void;
       onRestore: () => void;
       onOpenHeatView: () => void;
+      onClose?: () => void;
     }
   ) {}
 
@@ -64,6 +65,7 @@ export class HeatSidePanel {
         this.overlayEl.remove();
         this.overlayEl = null;
       }
+      this.callbacks.onClose?.();
     }, 300);
   }
 
@@ -82,7 +84,7 @@ export class HeatSidePanel {
     
     new ExtraButtonComponent(header)
       .setIcon("cross")
-      .setTooltip(t.legendCold === "❄️ Soğuk" ? "Kapat" : "Close")
+      .setTooltip(t.closeButton)
       .onClick(() => this.close());
 
     const content = this.panelEl.createEl("div", { cls: "heat-panel-content" });

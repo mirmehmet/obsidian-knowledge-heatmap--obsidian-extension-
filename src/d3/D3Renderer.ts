@@ -5,6 +5,8 @@ import { NodeTooltip } from "./NodeTooltip";
 import { ColorMapper } from "../core/ColorMapper";
 import { NoteData, BucketName } from "../core/types";
 
+export type NodeSizeMode = "links" | "score" | "content" | "visits";
+
 export class D3Renderer {
   private svg: d3.Selection<SVGSVGElement, unknown, null, undefined>;
   private g: d3.Selection<SVGGElement, unknown, null, undefined>;
@@ -13,6 +15,11 @@ export class D3Renderer {
   private nodeSelection: d3.Selection<any, HeatNode, any, any>;
   private linkSelection: d3.Selection<any, HeatLink, any, any>;
   private activeSearchQuery = "";
+  private focusedNodeId: string | null = null;
+  private allNodes: HeatNode[] = [];
+  private allLinks: HeatLink[] = [];
+  private currentNodeSizeMode: NodeSizeMode = "links";
+  private onFocusModeChange: ((active: boolean) => void) | null = null;
 
   constructor(
     private container: HTMLElement,
@@ -51,9 +58,12 @@ export class D3Renderer {
     notes: NoteData[],
     scores: Record<string, number>,
     resolvedLinks: Record<string, Record<string, number>>,
-    customColors?: Partial<Record<BucketName, string>>
+    customColors?: Partial<Record<BucketName, string>>,
+    nodeSizeMode: NodeSizeMode = "links"
   ): void {
     if (this.simulation) this.simulation.stop();
+    this.currentNodeSizeMode = nodeSizeMode;
+    this.focusedNodeId = null;
 
     const rect = this.container.getBoundingClientRect();
     const width = rect.width || 800;
@@ -74,6 +84,8 @@ export class D3Renderer {
         visitCount: note.visitCount,
         charCount: note.charCount,
         daysSinceModified: note.daysSinceModified,
+        folder: note.path.contains("/") ? note.path.split("/").slice(0, -1).join("/") : "/",
+        tags: note.tags || [],
       });
     });
 
@@ -132,7 +144,6 @@ export class D3Renderer {
       .join("g")
       .attr("tabindex", "0")
       .style("outline", "none")
-      .classed("heat-node-burning", (d) => d.score >= 0.8)
       .call(
         d3
           .drag<any, HeatNode>()
@@ -165,7 +176,7 @@ export class D3Renderer {
 
     node
       .append("circle")
-      .attr("r", (d) => 6 + Math.min(12, (d.inlinks + d.outlinks) / 2))
+      .attr("r", (d) => this.calcNodeRadius(d))
       .attr("fill", (d) => d.color)
       .attr("filter", (d) => GlowFilter.getFilterId(d.score))
       .style("cursor", "pointer")
@@ -183,11 +194,16 @@ export class D3Renderer {
       .on("click", (event, d) => {
         event.stopPropagation();
         this.onNodeClick(d.id);
+      })
+      .on("contextmenu", (event, d) => {
+        event.preventDefault();
+        event.stopPropagation();
+        this.enterFocusMode(d.id);
       });
 
     node
       .append("text")
-      .attr("dy", (d) => 12 + (6 + Math.min(12, (d.inlinks + d.outlinks) / 2)))
+      .attr("dy", (d) => 12 + this.calcNodeRadius(d))
       .attr("text-anchor", "middle")
       .attr("fill", "var(--text-normal)")
       .style("font-size", "10px")
@@ -205,7 +221,7 @@ export class D3Renderer {
           .distance(100)
       )
       .force("charge", d3.forceManyBody().strength(-200))
-      .force("collide", d3.forceCollide().radius((d) => 12 + (6 + Math.min(12, (d.inlinks + d.outlinks) / 2))))
+      .force("collide", d3.forceCollide().radius((d) => 12 + this.calcNodeRadius(d as HeatNode)))
       .force("center", d3.forceCenter(width / 2, height / 2));
 
     this.simulation.on("tick", () => {
@@ -314,5 +330,105 @@ export class D3Renderer {
     if (this.simulation) this.simulation.stop();
     this.tooltip.destroy();
     if (this.svg) this.svg.remove();
+  }
+
+  // B3: Node radius calculation based on selected mode
+  private calcNodeRadius(d: HeatNode): number {
+    switch (this.currentNodeSizeMode) {
+      case "score":
+        return 6 + d.score * 12;
+      case "content":
+        return 6 + Math.min(12, (d.charCount / 5000) * 12);
+      case "visits":
+        return 6 + Math.min(12, (d.visitCount / 50) * 12);
+      case "links":
+      default:
+        return 6 + Math.min(12, (d.inlinks + d.outlinks) / 2);
+    }
+  }
+
+  // B4: Focus mode — show only a node and its neighbors
+  public enterFocusMode(nodeId: string): void {
+    this.focusedNodeId = nodeId;
+    if (!this.nodeSelection || !this.linkSelection) return;
+
+    const neighborIds = new Set<string>();
+    neighborIds.add(nodeId);
+
+    this.linkSelection.each((l) => {
+      const sourceId = typeof l.source === "object" ? l.source.id : l.source;
+      const targetId = typeof l.target === "object" ? l.target.id : l.target;
+      if (sourceId === nodeId) neighborIds.add(targetId);
+      if (targetId === nodeId) neighborIds.add(sourceId);
+    });
+
+    // 2nd degree neighbors
+    const secondDegree = new Set<string>(neighborIds);
+    this.linkSelection.each((l) => {
+      const sourceId = typeof l.source === "object" ? l.source.id : l.source;
+      const targetId = typeof l.target === "object" ? l.target.id : l.target;
+      if (neighborIds.has(sourceId)) secondDegree.add(targetId);
+      if (neighborIds.has(targetId)) secondDegree.add(sourceId);
+    });
+
+    this.nodeSelection
+      .transition().duration(300)
+      .style("opacity", (n) => secondDegree.has(n.id) ? 1.0 : 0.05);
+
+    this.linkSelection
+      .transition().duration(300)
+      .attr("stroke-opacity", (l) => {
+        const sourceId = typeof l.source === "object" ? l.source.id : l.source;
+        const targetId = typeof l.target === "object" ? l.target.id : l.target;
+        return (secondDegree.has(sourceId) && secondDegree.has(targetId)) ? 0.5 : 0.02;
+      });
+
+    this.onFocusModeChange?.(true);
+  }
+
+  public exitFocusMode(): void {
+    this.focusedNodeId = null;
+    if (!this.nodeSelection || !this.linkSelection) return;
+
+    this.nodeSelection
+      .transition().duration(300)
+      .style("opacity", 1.0);
+
+    this.linkSelection
+      .transition().duration(300)
+      .attr("stroke-opacity", 0.35);
+
+    this.onFocusModeChange?.(false);
+  }
+
+  public isFocusModeActive(): boolean {
+    return this.focusedNodeId !== null;
+  }
+
+  public setFocusModeChangeHandler(handler: (active: boolean) => void): void {
+    this.onFocusModeChange = handler;
+  }
+
+  // A6: Focus on a specific node by path (used by context menu)
+  public focusOnNode(path: string): void {
+    if (!this.nodeSelection) return;
+    
+    const targetNode = this.nodeSelection.data().find((n) => n.id === path);
+    if (!targetNode || targetNode.x === undefined || targetNode.y === undefined) return;
+
+    const rect = this.container.getBoundingClientRect();
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+
+    const transform = d3.zoomIdentity
+      .translate(centerX - targetNode.x * 1.5, centerY - targetNode.y * 1.5)
+      .scale(1.5);
+
+    this.svg
+      .transition()
+      .duration(750)
+      .call(d3.zoom<SVGSVGElement, unknown>().transform as any, transform);
+
+    this.enterFocusMode(path);
   }
 }

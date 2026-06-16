@@ -1,6 +1,8 @@
 import { App } from "obsidian";
 import { BucketMap, BucketName } from "../core/types";
 import { ColorMapper } from "../core/ColorMapper";
+import { GroupsBuilder } from "./GroupsBuilder";
+import { Logger } from "../utils/logger";
 
 /**
  * Manages the read, write, backup, and restore operations on Obsidian's `.obsidian/graph.json` configuration file.
@@ -66,30 +68,7 @@ export class GraphJsonManager {
 
     const currentGraph = await this.readGraphJson();
 
-    const colorGroups: any[] = [];
-    const CHUNK_SIZE = 200; 
-
-    const bucketNames: BucketName[] = ["frozen", "cold", "warm", "hot", "burning"];
-
-    for (const bucketName of bucketNames) {
-      const paths = buckets[bucketName] || [];
-      if (paths.length === 0) continue;
-
-      const colorInfo = ColorMapper.getColor(bucketName, customColors);
-
-      for (let i = 0; i < paths.length; i += CHUNK_SIZE) {
-        const chunk = paths.slice(i, i + CHUNK_SIZE);
-        const query = chunk.map(p => `path:"${p}"`).join(" OR ");
-        
-        colorGroups.push({
-          query,
-          color: {
-            a: 1,
-            rgb: colorInfo.rgb,
-          },
-        });
-      }
-    }
+    const colorGroups = GroupsBuilder.build(buckets, customColors);
 
     const existingGroups = currentGraph.colorGroups ?? [];
     const userGroups = existingGroups.filter((g: any) => {
@@ -122,7 +101,7 @@ export class GraphJsonManager {
             await adapter.write(this.GRAPH_JSON_PATH, JSON.stringify(currentGraph, null, 2));
           }
         } catch (err) {
-          console.error("KnowledgeHeatMap: Fallback restore failed", err);
+          Logger.error("Fallback restore failed", err);
         }
       }
     }

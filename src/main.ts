@@ -1,7 +1,8 @@
-import { Plugin, TFile, Notice, WorkspaceLeaf } from "obsidian";
+import { Plugin, TFile, Notice, WorkspaceLeaf, Menu } from "obsidian";
 import { NoteAnalyzer } from "./core/NoteAnalyzer";
 import { ScoreCalculator } from "./core/ScoreCalculator";
 import { BucketSorter } from "./core/BucketSorter";
+import { ColorMapper } from "./core/ColorMapper";
 import { HeatCache } from "./store/HeatCache";
 import { VisitTracker } from "./store/VisitTracker";
 import { GraphJsonManager } from "./graph/GraphJsonManager";
@@ -11,7 +12,10 @@ import { HeatSidePanel } from "./ui/HeatSidePanel";
 import { SettingsTab } from "./ui/SettingsTab";
 import { DEFAULT_SETTINGS, KnowledgeHeatMapSettings } from "./store/PluginSettings";
 import { HeatMapView, VIEW_TYPE_KNOWLEDGE_HEAT_MAP } from "./ui/HeatMapView";
+import { DigestService } from "./store/DigestService";
+import { HistoryManager } from "./store/HistoryManager";
 import { getStrings } from "./utils/strings";
+import { Logger } from "./utils/logger";
 
 export default class KnowledgeHeatMapPlugin extends Plugin {
   public settings: KnowledgeHeatMapSettings;
@@ -20,13 +24,16 @@ export default class KnowledgeHeatMapPlugin extends Plugin {
   public graphJsonManager: GraphJsonManager;
   
   private controlButton: HeatControlButton;
+  private sidePanel: HeatSidePanel | null = null;
+  private statusBarEl: HTMLElement | null = null;
   private isApplying = false;
   private debounceTimeout: any = null;
   private refreshIntervalId: any = null;
 
   async onload() {
     const t = getStrings();
-    console.log(t.pluginLoading);
+    Logger.setDebugMode(this.settings?.debugMode ?? false);
+    Logger.info(t.pluginLoading);
 
     await this.loadSettings();
 
@@ -135,26 +142,77 @@ export default class KnowledgeHeatMapPlugin extends Plugin {
 
     this.addSettingTab(new SettingsTab(this.app, this));
 
+    // A7: Status bar score indicator
+    this.statusBarEl = this.addStatusBarItem();
+    this.statusBarEl.setText("");
+    this.registerEvent(
+      this.app.workspace.on("active-leaf-change", () => {
+        this.updateStatusBar();
+      })
+    );
+
+    // A6: Context menu integration
+    this.registerEvent(
+      this.app.workspace.on("file-menu", (menu: Menu, file) => {
+        if (file instanceof TFile && file.extension === "md") {
+          menu.addItem((item) => {
+            item
+              .setTitle("🌡 Show Heat Score")
+              .setIcon("thermometer")
+              .onClick(async () => {
+                const score = await this.getScoreForFile(file);
+                if (score !== null) {
+                  const bucket = ColorMapper.getBucketName(score);
+                  new Notice(`🌡 ${file.basename}: ${score.toFixed(2)} (${bucket.toUpperCase()})`, 5000);
+                } else {
+                  new Notice(`⚠️ ${file.basename}: Score not available`, 3000);
+                }
+              });
+          });
+          menu.addItem((item) => {
+            item
+              .setTitle("🔥 Show in Heat View")
+              .setIcon("fire")
+              .onClick(async () => {
+                await this.activateView();
+                // Wait for the view to initialize, then focus on the node
+                setTimeout(() => {
+                  const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_KNOWLEDGE_HEAT_MAP);
+                  leaves.forEach((leaf) => {
+                    if (leaf.view instanceof HeatMapView) {
+                      (leaf.view as any).focusOnFile?.(file.path);
+                    }
+                  });
+                }, 500);
+              });
+          });
+        }
+      })
+    );
+
     this.setupRefreshInterval();
 
+    // A2: Fixed — no longer calls restoreGraphView() when enableOnStartup is false
     this.app.workspace.onLayoutReady(async () => {
+      Logger.setDebugMode(this.settings.debugMode);
       if (this.settings.enableOnStartup) {
         this.settings.enabled = true;
         await this.saveSettings();
         this.controlButton.injectButtons(true);
         await this.applyHeatMap();
       } else {
-        this.settings.enabled = false;
-        await this.saveSettings();
         this.controlButton.injectButtons(false);
-        await this.restoreGraphView();
       }
+      this.updateStatusBar();
+
+      // C4: Weekly Digest check
+      DigestService.checkAndShow(this.settings, () => this.saveSettings());
     });
   }
 
   async onunload() {
     const t = getStrings();
-    console.log(t.pluginUnloading);
+    Logger.info(t.pluginUnloading);
 
     if (this.debounceTimeout) clearTimeout(this.debounceTimeout);
     if (this.refreshIntervalId) clearInterval(this.refreshIntervalId);
@@ -215,7 +273,7 @@ export default class KnowledgeHeatMapPlugin extends Plugin {
     this.isApplying = true;
 
     try {
-      if (this.settings.debugMode) console.log("KnowledgeHeatMap: Starting vault analysis...");
+      Logger.debug("Starting vault analysis...");
       
       const files = this.app.vault.getMarkdownFiles();
       if (files.length === 0) {
@@ -230,7 +288,7 @@ export default class KnowledgeHeatMapPlugin extends Plugin {
       
       let progressNotice: Notice | null = null;
       if (this.settings.showNotifications) {
-        progressNotice = new Notice(`${t.legendCold === "❄️ Soğuk" ? "Isı haritası hesaplanıyor" : "Calculating heat map"}... 0%`, 0);
+        progressNotice = new Notice(`${t.calculatingLabel}... 0%`, 0);
       }
 
       const notesData = await noteAnalyzer.analyzeVaultChunked(
@@ -240,7 +298,7 @@ export default class KnowledgeHeatMapPlugin extends Plugin {
         this.settings.excludeTags,
         (progress) => {
           if (progressNotice) {
-            progressNotice.setMessage(`${t.legendCold === "❄️ Soğuk" ? "Isı haritası hesaplanıyor" : "Calculating heat map"}... ${progress}%`);
+            progressNotice.setMessage(`${t.calculatingLabel}... ${progress}%`);
           }
         }
       );
@@ -274,9 +332,13 @@ export default class KnowledgeHeatMapPlugin extends Plugin {
 
       const buckets = BucketSorter.sort(scores);
 
+      const paletteColors = this.settings.palette === "custom"
+        ? this.settings.customColors
+        : ColorMapper.getPaletteColors(this.settings.palette);
+
       await this.graphJsonManager.applyHeatGroups(
         buckets,
-        this.settings.palette === "custom" ? this.settings.customColors : undefined
+        paletteColors
       );
 
       const reloaded = await GraphReloader.reload(this.app, this.settings.showNotifications);
@@ -284,8 +346,23 @@ export default class KnowledgeHeatMapPlugin extends Plugin {
       if (reloaded && this.settings.showNotifications) {
         new Notice(t.heatMapApplied);
       }
+
+      // B5: Save score snapshot for trend tracking
+      this.saveScoreHistory(scores);
+
+      // C6: Save heat snapshot for time travel
+      if (this.settings.enableHistory) {
+        HistoryManager.saveSnapshot(
+          this.settings.heatSnapshots,
+          scores,
+          buckets,
+          this.settings.maxSnapshots
+        );
+      }
+
+      this.updateStatusBar();
     } catch (err) {
-      console.error("KnowledgeHeatMap: Error applying heat map", err);
+      Logger.error("Error applying heat map", err);
       new Notice(t.heatMapFailed);
       await this.graphJsonManager.restore();
     } finally {
@@ -302,7 +379,7 @@ export default class KnowledgeHeatMapPlugin extends Plugin {
         new Notice(t.restoreSuccess);
       }
     } catch (err) {
-      console.error("KnowledgeHeatMap: Error restoring graph view", err);
+      Logger.error("Error restoring graph view", err);
       new Notice(t.restoreFailed);
     }
   }
@@ -332,11 +409,18 @@ export default class KnowledgeHeatMapPlugin extends Plugin {
     });
   }
 
+  // A3: Singleton side panel — prevents duplicate panel creation
   private togglePanel(leaf: WorkspaceLeaf): void {
     const container = leaf.view.containerEl;
     if (!container) return;
 
-    const panel = new HeatSidePanel(
+    // If panel already exists and is for this container, just toggle it
+    if (this.sidePanel) {
+      this.sidePanel.toggle();
+      return;
+    }
+
+    this.sidePanel = new HeatSidePanel(
       this.app,
       container,
       this.settings,
@@ -350,6 +434,7 @@ export default class KnowledgeHeatMapPlugin extends Plugin {
           } else {
             await this.restoreGraphView();
           }
+          this.updateStatusBar();
         },
         onSettingsChange: async () => {
           this.cache.invalidateAll();
@@ -365,12 +450,94 @@ export default class KnowledgeHeatMapPlugin extends Plugin {
           this.controlButton.updateAllButtonsState(false);
           await this.restoreGraphView();
           this.refreshD3View();
+          this.updateStatusBar();
         },
         onOpenHeatView: () => {
           this.activateView();
+        },
+        onClose: () => {
+          this.sidePanel = null;
         }
       }
     );
-    panel.toggle();
+    this.sidePanel.toggle();
+  }
+
+  // A7: Status bar update logic
+  private updateStatusBar(): void {
+    if (!this.statusBarEl) return;
+    const activeFile = this.app.workspace.getActiveFile();
+    if (!activeFile || activeFile.extension !== "md") {
+      this.statusBarEl.setText("");
+      return;
+    }
+    const score = this.cache.get(activeFile.path);
+    if (score !== null) {
+      const bucket = ColorMapper.getBucketName(score);
+      const icons: Record<string, string> = {
+        frozen: "❄️", cold: "🔵", warm: "🟡", hot: "🟠", burning: "🔴"
+      };
+      this.statusBarEl.setText(`${icons[bucket] || "🌡"} ${score.toFixed(2)} (${bucket})`);
+    } else {
+      this.statusBarEl.setText("🌡 --");
+    }
+  }
+
+  // A6: Calculate score for a specific file
+  private async getScoreForFile(file: TFile): Promise<number | null> {
+    const cached = this.cache.get(file.path);
+    if (cached !== null) return cached;
+
+    try {
+      const resolvedLinks = this.app.metadataCache?.resolvedLinks || {};
+      const inlinkCounts = NoteAnalyzer.computeAllInlinks(resolvedLinks);
+      const visitCounts = this.visitTracker.getVisits();
+      const noteAnalyzer = new NoteAnalyzer(this.app);
+      const noteData = noteAnalyzer.collectNoteData(file, inlinkCounts, visitCounts);
+      const score = ScoreCalculator.calculate(
+        noteData,
+        this.settings.weights,
+        this.settings.activeCriteria,
+        this.settings.timeRange
+      );
+      this.cache.set(file.path, score);
+      return score;
+    } catch (err) {
+      Logger.error("Error calculating score for file", file.path, err);
+      return null;
+    }
+  }
+
+  // B5: Save current scores to history for trend tracking
+  private async saveScoreHistory(scores: Record<string, number>): Promise<void> {
+    const now = Date.now();
+    const MAX_HISTORY = 30;
+
+    for (const [path, score] of Object.entries(scores)) {
+      if (!this.settings.scoreHistory[path]) {
+        this.settings.scoreHistory[path] = [];
+      }
+      this.settings.scoreHistory[path].push({ score, timestamp: now });
+
+      // Cap history per note
+      if (this.settings.scoreHistory[path].length > MAX_HISTORY) {
+        this.settings.scoreHistory[path] = this.settings.scoreHistory[path].slice(-MAX_HISTORY);
+      }
+    }
+    await this.saveSettings();
+  }
+
+  // B5: Calculate trend for a note based on score history
+  public getTrend(path: string, currentScore: number): "up" | "down" | "stable" {
+    const history = this.settings.scoreHistory[path];
+    if (!history || history.length < 2) return "stable";
+
+    const previousEntries = history.slice(0, -1);
+    const avgPrevious = previousEntries.reduce((sum, e) => sum + e.score, 0) / previousEntries.length;
+    const diff = currentScore - avgPrevious;
+
+    if (diff > 0.05) return "up";
+    if (diff < -0.05) return "down";
+    return "stable";
   }
 }

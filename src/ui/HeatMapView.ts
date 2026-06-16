@@ -1,11 +1,15 @@
 import { ItemView, WorkspaceLeaf, Notice } from "obsidian";
-import { D3Renderer } from "../d3/D3Renderer";
+import { D3Renderer, NodeSizeMode } from "../d3/D3Renderer";
 import { StatsPanel } from "./StatsPanel";
 import { HeatLegend } from "./HeatLegend";
 import { NoteAnalyzer } from "../core/NoteAnalyzer";
 import { ScoreCalculator } from "../core/ScoreCalculator";
 import { BucketSorter } from "../core/BucketSorter";
+import { ColorMapper } from "../core/ColorMapper";
 import { getStrings } from "../utils/strings";
+import { Logger } from "../utils/logger";
+import { ExportUtils } from "../utils/ExportUtils";
+import type KnowledgeHeatMapPlugin from "../main";
 
 export const VIEW_TYPE_KNOWLEDGE_HEAT_MAP = "knowledge-heat-map";
 
@@ -17,8 +21,10 @@ export class HeatMapView extends ItemView {
   private graphContainerEl: HTMLElement;
   private searchQuery = "";
   private filterType = "all";
+  private nodeSizeMode: NodeSizeMode = "links";
+  private showAllBtn: HTMLElement | null = null;
 
-  constructor(leaf: WorkspaceLeaf, private plugin: any) {
+  constructor(leaf: WorkspaceLeaf, private plugin: KnowledgeHeatMapPlugin) {
     super(leaf);
   }
 
@@ -87,11 +93,57 @@ export class HeatMapView extends ItemView {
       this.refresh();
     });
 
+    // B3: Node Size Dropdown
+    const nodeSizeWrapper = sidebar.createEl("div", { cls: "heat-sidebar-filter-wrapper" });
+    nodeSizeWrapper.createEl("label", { text: t.d3NodeSizeLabel, cls: "heat-sidebar-filter-label" });
+    const nodeSizeSelect = nodeSizeWrapper.createEl("select", { cls: "heat-sidebar-filter-select" }) as HTMLSelectElement;
+    nodeSizeSelect.createEl("option", { value: "links", text: t.d3NodeSizeLinks });
+    nodeSizeSelect.createEl("option", { value: "score", text: t.d3NodeSizeScore });
+    nodeSizeSelect.createEl("option", { value: "content", text: t.d3NodeSizeContent });
+    nodeSizeSelect.createEl("option", { value: "visits", text: t.d3NodeSizeVisits });
+    nodeSizeSelect.value = this.nodeSizeMode;
+    nodeSizeSelect.addEventListener("change", () => {
+      this.nodeSizeMode = nodeSizeSelect.value as NodeSizeMode;
+      this.refresh();
+    });
+
+    // B4: Show All button (visible when focus mode is active)
+    this.showAllBtn = sidebar.createEl("button", {
+      text: t.d3ShowAllButton,
+      cls: "heat-show-all-btn",
+    });
+    this.showAllBtn.style.display = "none";
+    this.showAllBtn.addEventListener("click", () => {
+      if (this.d3Renderer) {
+        this.d3Renderer.exitFocusMode();
+      }
+    });
+
+    // B6: Export buttons
+    const exportRow = sidebar.createEl("div", { cls: "heat-sidebar-actions heat-export-row" });
+    const exportPngBtn = exportRow.createEl("button", { text: t.d3ExportPng });
+    exportPngBtn.addEventListener("click", () => {
+      const svg = this.graphContainerEl.querySelector("svg") as SVGSVGElement | null;
+      if (svg) ExportUtils.exportAsPng(svg, "knowledge-heat-map.png");
+    });
+    const exportSvgBtn = exportRow.createEl("button", { text: t.d3ExportSvg });
+    exportSvgBtn.addEventListener("click", () => {
+      const svg = this.graphContainerEl.querySelector("svg") as SVGSVGElement | null;
+      if (svg) ExportUtils.exportAsSvg(svg, "knowledge-heat-map.svg");
+    });
+
     const statsContainer = sidebar.createEl("div", { cls: "heat-view-stats-container" });
     const legendContainer = container.createEl("div", { cls: "heat-view-legend-container" });
 
     this.d3Renderer = new D3Renderer(this.graphContainerEl, (path) => {
       this.app.workspace.openLinkText(path, "", false);
+    });
+
+    // B4: Hook focus mode change to toggle Show All button
+    this.d3Renderer.setFocusModeChangeHandler((active) => {
+      if (this.showAllBtn) {
+        this.showAllBtn.style.display = active ? "block" : "none";
+      }
     });
 
     this.statsPanel = new StatsPanel(statsContainer, this.plugin.settings.customColors);
@@ -135,7 +187,7 @@ export class HeatMapView extends ItemView {
       const loadingEl = this.graphContainerEl.createEl("div", { cls: "heat-loading-container" });
       loadingEl.createEl("div", { cls: "heat-loading-spinner" });
       const progressText = loadingEl.createEl("div", { 
-        text: `${t.legendCold === "❄️ Soğuk" ? "Hesaplanıyor" : "Calculating"}... 0%`, 
+        text: `${t.calculatingLabel}... 0%`, 
         cls: "heat-loading-text" 
       });
 
@@ -145,7 +197,7 @@ export class HeatMapView extends ItemView {
         this.plugin.settings.excludeFolders,
         this.plugin.settings.excludeTags,
         (progress) => {
-          progressText.setText(`${t.legendCold === "❄️ Soğuk" ? "Hesaplanıyor" : "Calculating"}... ${progress}%`);
+          progressText.setText(`${t.calculatingLabel}... ${progress}%`);
         }
       );
 
@@ -195,12 +247,17 @@ export class HeatMapView extends ItemView {
       const buckets = BucketSorter.sort(filteredScores);
       const resolvedLinks = this.app.metadataCache.resolvedLinks;
 
+      const paletteColors = this.plugin.settings.palette === "custom"
+        ? this.plugin.settings.customColors
+        : ColorMapper.getPaletteColors(this.plugin.settings.palette);
+
       if (this.d3Renderer) {
         this.d3Renderer.render(
           filteredNotes,
           scores,
           resolvedLinks,
-          this.plugin.settings.palette === "custom" ? this.plugin.settings.customColors : undefined
+          paletteColors,
+          this.nodeSizeMode
         );
         this.d3Renderer.highlightNodes(this.searchQuery);
       }
@@ -213,8 +270,15 @@ export class HeatMapView extends ItemView {
         this.legend.render();
       }
     } catch (err) {
-      console.error("KnowledgeHeatMap: Error rendering D3 custom view", err);
+      Logger.error("Error rendering D3 custom view", err);
       new Notice(t.heatMapFailed);
+    }
+  }
+
+  // A6+B4: Focus on a specific file (called from context menu)
+  public focusOnFile(path: string): void {
+    if (this.d3Renderer) {
+      this.d3Renderer.focusOnNode(path);
     }
   }
 }

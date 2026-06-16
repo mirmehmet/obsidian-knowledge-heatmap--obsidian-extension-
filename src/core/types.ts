@@ -8,7 +8,7 @@ export interface NoteData {
   name: string;
   /** Days elapsed since the note was last modified. */
   daysSinceModified: number;
-  /** Size of the note in characters (bytes). */
+  /** Size of the note file in bytes (used as a proxy for content length). */
   charCount: number;
   /** Count of outgoing links from this note. */
   outlinks: number;

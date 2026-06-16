@@ -90,6 +90,54 @@ export const STRINGS = {
     d3FilterOrphans: "Yalnız (Orphan) Notlar",
     d3FilterBurning: "Çok Sıcak (Burning) Notlar",
     d3FilterCold: "Soğuk (Cold/Frozen) Notlar",
+
+    // Shared labels
+    calculatingLabel: "Isı haritası hesaplanıyor",
+    closeButton: "Kapat",
+    paletteAmberName: "Amber Isı Spektrumu",
+    paletteCustomName: "Özel Renkler",
+    colorFrozenName: "Frozen (En Soğuk) Rengi",
+    colorColdName: "Cold Rengi",
+    colorWarmName: "Warm Rengi",
+    colorHotName: "Hot Rengi",
+    colorBurningName: "Burning (En Sıcak) Rengi",
+    contextMenuShowScore: "🌡 Isı Skorunu Göster",
+    contextMenuShowInView: "🔥 Isı Haritasında Göster",
+    scoreNotAvailable: "Skor hesaplanamadı",
+
+    // B3: Node size
+    d3NodeSizeLabel: "Node Boyutu:",
+    d3NodeSizeLinks: "Bağlantı Sayısı",
+    d3NodeSizeScore: "Isı Skoru",
+    d3NodeSizeContent: "İçerik Uzunluğu",
+    d3NodeSizeVisits: "Ziyaret Sayısı",
+
+    // B4: Focus mode
+    d3ShowAllButton: "Tümünü Göster",
+    d3FocusModeHint: "Bir node'a sağ tıklayarak odak moduna geçin",
+
+    // B5: Trend
+    trendUp: "↑ Yükseliyor",
+    trendDown: "↓ Düşüyor",
+    trendStable: "→ Stabil",
+    tooltipTrend: "Trend:",
+
+    // B6: Export
+    d3ExportPng: "📥 PNG Olarak İndir",
+    d3ExportSvg: "📥 SVG Olarak İndir",
+
+    // C2: Clustering
+    d3GroupByLabel: "Grupla:",
+    d3GroupByNone: "Gruplama Yok",
+    d3GroupByFolder: "Klasöre Göre",
+    d3GroupByTag: "Etikete Göre",
+
+    // C5: Advanced filters
+    d3TagFilterLabel: "Etiket Filtresi:",
+    d3TagFilterAll: "Tüm Etiketler",
+    d3FolderFilterLabel: "Klasör Filtresi:",
+    d3FolderFilterAll: "Tüm Klasörler",
+    d3ScoreRangeLabel: "Skor Aralığı:",
   },
   en: {
     pluginLoading: "Loading Knowledge Heat Map plugin...",
@@ -182,6 +230,54 @@ export const STRINGS = {
     d3FilterOrphans: "Orphan Notes Only",
     d3FilterBurning: "Burning Notes Only",
     d3FilterCold: "Cold/Frozen Notes Only",
+
+    // Shared labels
+    calculatingLabel: "Calculating heat map",
+    closeButton: "Close",
+    paletteAmberName: "Amber Heat Spectrum",
+    paletteCustomName: "Custom Colors",
+    colorFrozenName: "Frozen (Coldest) Color",
+    colorColdName: "Cold Color",
+    colorWarmName: "Warm Color",
+    colorHotName: "Hot Color",
+    colorBurningName: "Burning (Hottest) Color",
+    contextMenuShowScore: "🌡 Show Heat Score",
+    contextMenuShowInView: "🔥 Show in Heat View",
+    scoreNotAvailable: "Score not available",
+
+    // B3: Node size
+    d3NodeSizeLabel: "Node Size By:",
+    d3NodeSizeLinks: "Link Count",
+    d3NodeSizeScore: "Heat Score",
+    d3NodeSizeContent: "Content Length",
+    d3NodeSizeVisits: "Visit Count",
+
+    // B4: Focus mode
+    d3ShowAllButton: "Show All",
+    d3FocusModeHint: "Right-click a node to enter focus mode",
+
+    // B5: Trend
+    trendUp: "↑ Rising",
+    trendDown: "↓ Falling",
+    trendStable: "→ Stable",
+    tooltipTrend: "Trend:",
+
+    // B6: Export
+    d3ExportPng: "📥 Export PNG",
+    d3ExportSvg: "📥 Export SVG",
+
+    // C2: Clustering
+    d3GroupByLabel: "Group By:",
+    d3GroupByNone: "No Grouping",
+    d3GroupByFolder: "By Folder",
+    d3GroupByTag: "By Tag",
+
+    // C5: Advanced filters
+    d3TagFilterLabel: "Tag Filter:",
+    d3TagFilterAll: "All Tags",
+    d3FolderFilterLabel: "Folder Filter:",
+    d3FolderFilterAll: "All Folders",
+    d3ScoreRangeLabel: "Score Range:",
   }
 };
 

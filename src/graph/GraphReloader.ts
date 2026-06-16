@@ -1,4 +1,5 @@
 import { App, Notice } from "obsidian";
+import { Logger } from "../utils/logger";
 
 /**
  * Handles hot-reloading and syncing graph configurations into active Obsidian Graph View panels.
@@ -40,7 +41,7 @@ export class GraphReloader {
         if (graphPlugin.instance.data) graphPlugin.instance.data = diskData;
       }
     } catch (err) {
-      console.error("KnowledgeHeatMap: Error loading graph plugin data from disk", err);
+      Logger.error("Error loading graph plugin data from disk", err);
     }
 
     // 2. Sync and trigger redraw on each open graph view
@@ -87,7 +88,7 @@ export class GraphReloader {
           await leaf.setViewState(state);
         }
       } catch (err) {
-        console.error("KnowledgeHeatMap: Error reloading graph leaf view", err);
+        Logger.error("Error reloading graph leaf view", err);
         try {
           const state = leaf.getViewState();
           await leaf.setViewState({ type: "empty" });

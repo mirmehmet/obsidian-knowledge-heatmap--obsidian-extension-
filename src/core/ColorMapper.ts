@@ -9,14 +9,54 @@ export interface ColorInfo {
  * Handles color mapping, conversions, and default visual settings for heat map score representations.
  */
 export class ColorMapper {
-  /** Default color hex codes for each of the 5 heat buckets. */
-  public static readonly DEFAULT_COLORS: Record<BucketName, string> = {
-    frozen: "#0f2942",
-    cold: "#1e5c8a",
-    warm: "#d97706",
-    hot: "#f59e0b",
-    burning: "#ef4444",
+  /** All available palettes */
+  public static readonly PALETTES: Record<string, Record<BucketName, string>> = {
+    amber: {
+      frozen: "#0f2942",
+      cold: "#1e5c8a",
+      warm: "#d97706",
+      hot: "#f59e0b",
+      burning: "#ef4444",
+    },
+    ocean: {
+      frozen: "#0c1426",
+      cold: "#1a3a5c",
+      warm: "#2980b9",
+      hot: "#3498db",
+      burning: "#1abc9c",
+    },
+    forest: {
+      frozen: "#1a2e1a",
+      cold: "#2d5a2d",
+      warm: "#4caf50",
+      hot: "#8bc34a",
+      burning: "#cddc39",
+    },
+    sunset: {
+      frozen: "#1a0a2e",
+      cold: "#4a1a6b",
+      warm: "#e91e63",
+      hot: "#ff5722",
+      burning: "#ff9800",
+    },
+    monochrome: {
+      frozen: "#1a1a1a",
+      cold: "#4a4a4a",
+      warm: "#8a8a8a",
+      hot: "#c0c0c0",
+      burning: "#f0f0f0",
+    },
+    neon: {
+      frozen: "#0a0a1a",
+      cold: "#1a0a3a",
+      warm: "#e040fb",
+      hot: "#7c4dff",
+      burning: "#00e5ff",
+    },
   };
+
+  /** Default color hex codes for each of the 5 heat buckets (amber palette). */
+  public static readonly DEFAULT_COLORS: Record<BucketName, string> = ColorMapper.PALETTES.amber;
 
   /**
    * Converts a hex color string into a decimal integer color code as required by Obsidian's graph.json schema.
@@ -64,5 +104,20 @@ export class ColorMapper {
       hex,
       rgb: this.hexToRgbInt(hex),
     };
+  }
+
+  /**
+   * Resolves palette colors by name. Returns the colors for the given palette,
+   * or the default amber palette if the name is not recognized.
+   */
+  public static getPaletteColors(paletteName: string): Record<BucketName, string> {
+    return this.PALETTES[paletteName] || this.PALETTES.amber;
+  }
+
+  /**
+   * Returns all available palette names.
+   */
+  public static getAvailablePaletteNames(): string[] {
+    return Object.keys(this.PALETTES);
   }
 }

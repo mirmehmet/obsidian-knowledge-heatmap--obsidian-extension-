@@ -1,8 +1,9 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
 import { getStrings } from "../utils/strings";
+import type KnowledgeHeatMapPlugin from "../main";
 
 export class SettingsTab extends PluginSettingTab {
-  constructor(app: App, private plugin: any) {
+  constructor(app: App, private plugin: KnowledgeHeatMapPlugin) {
     super(app, plugin);
   }
 
@@ -62,11 +63,16 @@ export class SettingsTab extends PluginSettingTab {
       .setDesc(t.settingsPaletteDesc)
       .addDropdown((dropdown) =>
         dropdown
-          .addOption("amber", t.legendCold === "❄️ Soğuk" ? "Amber Isı Spektrumu" : "Amber Heat Spectrum")
-          .addOption("custom", t.legendCold === "❄️ Soğuk" ? "Özel Renkler" : "Custom Colors")
+          .addOption("amber", t.paletteAmberName)
+          .addOption("ocean", "Ocean")
+          .addOption("forest", "Forest")
+          .addOption("sunset", "Sunset")
+          .addOption("monochrome", "Monochrome")
+          .addOption("neon", "Neon")
+          .addOption("custom", t.paletteCustomName)
           .setValue(this.plugin.settings.palette)
           .onChange(async (value) => {
-            this.plugin.settings.palette = value as "amber" | "custom";
+            this.plugin.settings.palette = value as typeof this.plugin.settings.palette;
             await this.plugin.saveSettings();
             this.onSettingsChanged();
             this.display(); 
@@ -92,7 +98,7 @@ export class SettingsTab extends PluginSettingTab {
 
     if (this.plugin.settings.palette === "custom") {
       new Setting(containerEl)
-        .setName(t.legendCold === "❄️ Soğuk" ? "Frozen (En Soğuk) Rengi" : "Frozen (Coldest) Color")
+        .setName(t.colorFrozenName)
         .addText((text) =>
           text
             .setValue(this.plugin.settings.customColors.frozen)
@@ -104,7 +110,7 @@ export class SettingsTab extends PluginSettingTab {
         );
 
       new Setting(containerEl)
-        .setName(t.legendCold === "❄️ Soğuk" ? "Cold Rengi" : "Cold Color")
+        .setName(t.colorColdName)
         .addText((text) =>
           text
             .setValue(this.plugin.settings.customColors.cold)
@@ -116,7 +122,7 @@ export class SettingsTab extends PluginSettingTab {
         );
 
       new Setting(containerEl)
-        .setName(t.legendCold === "❄️ Soğuk" ? "Warm Rengi" : "Warm Color")
+        .setName(t.colorWarmName)
         .addText((text) =>
           text
             .setValue(this.plugin.settings.customColors.warm)
@@ -128,7 +134,7 @@ export class SettingsTab extends PluginSettingTab {
         );
 
       new Setting(containerEl)
-        .setName(t.legendCold === "❄️ Soğuk" ? "Hot Rengi" : "Hot Color")
+        .setName(t.colorHotName)
         .addText((text) =>
           text
             .setValue(this.plugin.settings.customColors.hot)
@@ -140,7 +146,7 @@ export class SettingsTab extends PluginSettingTab {
         );
 
       new Setting(containerEl)
-        .setName(t.legendCold === "❄️ Soğuk" ? "Burning (En Sıcak) Rengi" : "Burning (Hottest) Color")
+        .setName(t.colorBurningName)
         .addText((text) =>
           text
             .setValue(this.plugin.settings.customColors.burning)

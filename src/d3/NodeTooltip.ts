@@ -23,12 +23,23 @@ export class NodeTooltip {
     const bucketName = ColorMapper.getBucketName(node.score);
     const bucketLabel = bucketName.toUpperCase();
 
+    const trendLabel = node.trend === "up" ? t.trendUp
+      : node.trend === "down" ? t.trendDown
+      : t.trendStable;
+    const trendColor = node.trend === "up" ? "#22c55e"
+      : node.trend === "down" ? "#ef4444"
+      : "var(--text-muted)";
+
     const content = `
       <div class="tooltip-title">${node.name}</div>
       <div class="tooltip-divider"></div>
       <div class="tooltip-row">
         <span>🌡 Heat Score:</span>
         <span class="tooltip-score-${bucketName}" style="font-weight:bold;">${node.score.toFixed(2)} (${bucketLabel})</span>
+      </div>
+      <div class="tooltip-row">
+        <span>${t.tooltipTrend}</span>
+        <span style="color:${trendColor};font-weight:bold;">${trendLabel}</span>
       </div>
       <div class="tooltip-divider"></div>
       <div class="tooltip-row">

@@ -9,7 +9,7 @@ export interface KnowledgeHeatMapSettings {
   activeCriteria: Record<string, boolean>;
   timeRange: string; 
   
-  palette: "amber" | "custom";
+  palette: "amber" | "ocean" | "forest" | "sunset" | "monochrome" | "neon" | "custom";
   customColors: {
     frozen: string;
     cold: string;
@@ -23,6 +23,18 @@ export interface KnowledgeHeatMapSettings {
   excludeTags: string[];
   minNoteAgeDays: number;
   debugMode: boolean;
+
+  // B5: Score history for trend tracking
+  scoreHistory: Record<string, { score: number; timestamp: number }[]>;
+
+  // C4: Weekly Digest
+  weeklyDigestEnabled: boolean;
+  lastDigestDate: string;
+
+  // C6: Time Travel
+  enableHistory: boolean;
+  maxSnapshots: number;
+  heatSnapshots: import("./HistoryManager").HeatSnapshot[];
 }
 
 export const DEFAULT_SETTINGS: KnowledgeHeatMapSettings = {
@@ -60,4 +72,16 @@ export const DEFAULT_SETTINGS: KnowledgeHeatMapSettings = {
   excludeTags: [],
   minNoteAgeDays: 0,
   debugMode: false,
+
+  // B5: Score history
+  scoreHistory: {},
+
+  // C4: Weekly Digest
+  weeklyDigestEnabled: true,
+  lastDigestDate: "",
+
+  // C6: Time Travel
+  enableHistory: true,
+  maxSnapshots: 90,
+  heatSnapshots: [],
 };
